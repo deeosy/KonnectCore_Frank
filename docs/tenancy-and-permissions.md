@@ -76,3 +76,6 @@ Any later collection or field-work feature must obtain farm and crop references 
 - Admins and Managers may mutate collection records. Field Officers are read-only in Stage 5; assigned-member collection entry belongs to Stage 7.
 
 Future finance, field, dashboard, and export code must resolve collection records from the active organisation and must never trust an organisation, member, crop, or recorder identifier supplied by the client without tenant-scoped validation.
+## Stage 6 finance controls
+
+Financial records, member choices, lookups, filters, and member-profile history are organisation-scoped. Cross-tenant UUIDs return 404 or fail form/model validation. The recorder is server-controlled. Admins and Managers mutate; Field Officers are read-only.

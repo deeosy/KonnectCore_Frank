@@ -72,3 +72,6 @@ All forms receive the active organisation explicitly. Member and crop choices ar
 The model calculates `total_value = quantity × price_per_unit` with decimal arithmetic and currency precision on every save. The original recorder is server-controlled and remains unchanged when another authorised staff member edits the record. Admins and Managers may create and edit collections; Field Officers have read access until Stage 7 adds their assigned-member field workflow.
 
 Collection photos are stored below the organisation media namespace and are served only through authenticated, tenant-scoped views. Collection history appears on the already tenant-scoped member profile. Filters support member, crop, date range, location, grade, membership number, and member name; report export remains Stage 8.
+## Finance (Stage 6)
+
+`apps.finance` stores tenant-scoped payments to members, dues, contributions, optional savings, and organisation expenses. It is an operational register, not double-entry accounting. Amount, paid amount, status, method, date, reference, notes, and original recorder are retained. Outstanding value is derived from amount less paid amount, with cancelled records excluded.
