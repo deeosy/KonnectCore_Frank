@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 import os
 from dotenv import load_dotenv
 
@@ -11,7 +11,7 @@ ALLOWED_HOSTS = [x.strip() for x in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost
 INSTALLED_APPS = [
     "django.contrib.admin", "django.contrib.auth", "django.contrib.contenttypes",
     "django.contrib.sessions", "django.contrib.messages", "django.contrib.staticfiles",
-    "apps.core", "apps.accounts", "apps.organisations",
+    "apps.core", "apps.accounts", "apps.organisations", "apps.members",
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",

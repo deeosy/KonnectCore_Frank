@@ -2,7 +2,7 @@
 
 KonnectCore is a multi-organisation SaaS platform for cooperatives, farmer organisations, associations, and similar member-based organisations.
 
-This repository currently contains **Stage 1 only**: authentication, private organisation workspaces, staff roles, controlled onboarding, and tenant-isolation foundations.
+This repository currently contains **Stages 1–2**: authentication, private organisation workspaces, staff roles, controlled onboarding, tenant-isolation foundations, and member management.
 
 ## Stage 1 features
 
@@ -16,7 +16,17 @@ This repository currently contains **Stage 1 only**: authentication, private org
 - Responsive desktop, tablet, and mobile interface
 - Automated authentication, permission, invitation, and cross-organisation isolation tests
 
-Stage 2 member management has intentionally not been started.
+## Stage 2 features
+
+- Tenant-scoped member registration and editing
+- Name, phone, membership number, ID/reference, location, photo, and status
+- Search by member details and filter by status
+- Private member documents and photos served through authenticated tenant-checked routes
+- Atomic UTF-8 CSV and XLSX imports
+- Member create, update, document, and import history
+- Admin/Manager mutation access and Field Officer read-only access until assigned-member workflows are added in Stage 7
+
+Stage 3 groups and organisation structure has intentionally not been started.
 
 ## Requirements
 
@@ -102,6 +112,7 @@ docker compose run --rm web python -m pytest
 ```text
 apps/accounts/          Custom email-based user model
 apps/organisations/     Organisations, memberships, roles, invitations, tenant middleware
+apps/members/           Tenant-scoped members, files, imports, history, and workflows
 apps/core/              Shared application foundation for later stages
 config/                 Django settings and URL configuration
 templates/              Responsive server-rendered interface

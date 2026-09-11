@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}{{ member.full_name }} · Members{% endblock %}
+{% block content %}
+<div class="page-head"><div><p class="eyebrow"><a href="{% url 'member_list' %}">Members</a> / {{ member.membership_number }}</p><h1>{{ member.full_name }}</h1><span class="status status-{{ member.status }}">{{ member.get_status_display }}</span></div>{% if active_membership.role == "admin" or active_membership.role == "manager" %}<div class="actions"><a class="button secondary" href="{% url 'member_document_add' member.id %}">Attach document</a> <a class="button" href="{% url 'member_edit' member.id %}">Edit member</a></div>{% endif %}</div>
+<div class="profile-grid">
+  <section class="card profile-card">{% if member.photo %}<img class="profile-photo" src="{% url 'member_photo' member.id %}" alt="Photo of {{ member.full_name }}">{% else %}<div class="profile-placeholder">{{ member.first_name|first }}{{ member.last_name|first }}</div>{% endif %}<dl><dt>Membership number</dt><dd>{{ member.membership_number }}</dd><dt>Phone</dt><dd>{{ member.phone|default:"—" }}</dd><dt>ID/reference</dt><dd>{{ member.id_reference|default:"—" }}</dd><dt>Location</dt><dd>{{ member.location|default:"—" }}</dd><dt>Registered</dt><dd>{{ member.created_at|date:"Y-m-d" }}</dd></dl></section>
+  <div class="stack-sections"><section class="card"><h2>Documents and photos</h2>{% for document in member.documents.all %}<p><a href="{% url 'member_document_download' document.id %}">{{ document.title }}</a><br><span class="muted small">Added {{ document.uploaded_at|date:"Y-m-d H:i" }} by {{ document.uploaded_by }}</span></p>{% empty %}<p class="muted">No documents attached.</p>{% endfor %}</section>
+  <section class="card"><h2>Member history</h2><ol class="timeline">{% for event in member.history.all %}<li><strong>{{ event.get_action_display }}</strong><br><span class="muted small">{{ event.created_at|date:"Y-m-d H:i" }} · {{ event.actor }}</span>{% if event.changes %}<details><summary>View changes</summary><pre>{{ event.changes }}</pre></details>{% endif %}</li>{% empty %}<li>No history recorded.</li>{% endfor %}</ol></section></div>
+</div>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Members · {{ active_organisation.name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><p class="eyebrow">{{ active_organisation.name }}</p><h1>Members</h1><p class="muted">Search and manage organisation members.</p></div>
+  {% if active_membership.role == "admin" or active_membership.role == "manager" %}
+  <div class="actions"><a class="button secondary" href="{% url 'member_import' %}">Import</a> <a class="button" href="{% url 'member_create' %}">Register member</a></div>
+  {% endif %}
+</div>
+<form method="get" class="filter-bar">
+  <label><span>Search</span><input type="search" name="q" value="{{ query }}" placeholder="Name, number, phone, ID or location"></label>
+  <label><span>Status</span><select name="status"><option value="">All statuses</option>{% for value,label in statuses %}<option value="{{ value }}"{% if selected_status == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+  <button class="button">Filter</button>
+  {% if query or selected_status %}<a href="{% url 'member_list' %}">Clear</a>{% endif %}
+</form>
+<div class="table-wrap"><table><thead><tr><th>Member</th><th>Membership no.</th><th>Phone</th><th>Location</th><th>Status</th></tr></thead><tbody>
+{% for member in members %}<tr><td><a href="{% url 'member_detail' member.id %}"><strong>{{ member.full_name }}</strong></a></td><td>{{ member.membership_number }}</td><td>{{ member.phone|default:"—" }}</td><td>{{ member.location|default:"—" }}</td><td><span class="status status-{{ member.status }}">{{ member.get_status_display }}</span></td></tr>
+{% empty %}<tr><td colspan="5">No members match this search.</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

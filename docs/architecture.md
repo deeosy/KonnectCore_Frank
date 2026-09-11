@@ -2,12 +2,13 @@
 
 ## Current scope
 
-The repository is a Django modular monolith. Stage 1 implements authentication, organisation workspaces, role-based staff access, controlled onboarding, and the tenant boundary. Business modules begin only after Stage 1 approval.
+The repository is a Django modular monolith. Stages 1–2 implement authentication, organisation workspaces, role-based staff access, controlled onboarding, the tenant boundary, and member management. Groups and later operational modules have not been started.
 
 ## Modules
 
 - `apps.accounts`: custom user model using a unique email address as the login identifier.
 - `apps.organisations`: organisations, account status, user memberships, roles, invitations, active-organisation middleware, onboarding views, and role decorators.
+- `apps.members`: organisation-owned members, private documents/photos, audit history, search/filtering, and transactional CSV/XLSX import.
 - `apps.core`: reserved for shared abstractions used by later business modules.
 - `config`: environment-driven settings, root routes, WSGI, and ASGI configuration.
 - `templates` and `static`: responsive server-rendered UI.
@@ -29,7 +30,10 @@ A user with exactly one valid membership is automatically placed in that workspa
 - `OrganisationMembership`: unique user-to-organisation relationship with Admin, Manager, or Field Officer role.
 - `StaffInvitation`: hashed, seven-day, single-use invitation scoped to one organisation and role.
 - `OrganisationOwnedModel`: abstract base for future tenant-owned records.
-- `OrganisationQuerySet.for_organisation()`: fail-closed query helper for future tenant-owned records.
+- `OrganisationQuerySet.for_organisation()`: fail-closed query helper used by tenant-owned records.
+- `Member`: UUID-addressed member identity with organisation-scoped membership-number uniqueness.
+- `MemberDocument`: private PDF/image attachment stored below the owning organisation/member path.
+- `MemberHistory`: actor-attributed create, update, document, and import history.
 
 ## Onboarding
 

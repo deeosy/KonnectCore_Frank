@@ -1,0 +1,3 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} · KonnectCore{% endblock %}
+{% block content %}<section class="form-card wide"><p class="eyebrow"><a href="{% url 'member_list' %}">Members</a></p><h1>{{ title }}</h1><form method="post" enctype="multipart/form-data" class="form-grid">{% csrf_token %}{{ form.as_p }}<div class="form-actions"><a href="{% if member %}{% url 'member_detail' member.id %}{% else %}{% url 'member_list' %}{% endif %}">Cancel</a><button class="button">Save member</button></div></form></section>{% endblock %}

@@ -29,7 +29,9 @@ Always:
 - **Field Officer**: restricted field workflows and assigned scope in later stages.
 - **KonnectCore Super Admin**: platform owner identity using Django superuser status; not an organisation role.
 
-Stage 1 currently enforces that only organisation Admins can list, create, or invite staff. Managers and Field Officers receive HTTP 403 for those operations. Organisation users cannot access platform administration.
+Stage 1 enforces that only organisation Admins can list, create, or invite staff. Managers and Field Officers receive HTTP 403 for those operations. Organisation users cannot access platform administration.
+
+Stage 2 allows all active staff roles to view tenant-scoped member lists and profiles. Admins and Managers can register/edit members, attach documents, and import records. Field Officers remain read-only until assigned-member field workflows are implemented in Stage 7. Member detail, edit, file, search, and import operations are all derived from `request.organisation`; cross-tenant UUID guessing returns 404.
 
 ## Account status
 
