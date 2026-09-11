@@ -1,0 +1,3 @@
+{% extends "base.html" %}
+{% block title %}Assign member · {{ unit.name }}{% endblock %}
+{% block content %}<section class="form-card"><p class="eyebrow">{{ unit.get_unit_type_display }}</p><h1>Assign member to {{ unit.name }}</h1><p class="muted">Only members in {{ active_organisation.name }} are available.</p><form method="post" class="stack">{% csrf_token %}{{ form.as_p }}<div class="form-actions"><a href="{% url 'structure_detail' unit.id %}">Cancel</a><button class="button">Assign member</button></div></form></section>{% endblock %}

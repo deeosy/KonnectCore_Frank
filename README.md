@@ -2,7 +2,7 @@
 
 KonnectCore is a multi-organisation SaaS platform for cooperatives, farmer organisations, associations, and similar member-based organisations.
 
-This repository currently contains **Stages 1–2**: authentication, private organisation workspaces, staff roles, controlled onboarding, tenant-isolation foundations, and member management.
+This repository currently contains **Stages 1–3**: authentication, private organisation workspaces, staff roles, controlled onboarding, tenant-isolation foundations, member management, and organisation structure.
 
 ## Stage 1 features
 
@@ -26,7 +26,17 @@ This repository currently contains **Stages 1–2**: authentication, private org
 - Member create, update, document, and import history
 - Admin/Manager mutation access and Field Officer read-only access until assigned-member workflows are added in Stage 7
 
-Stage 3 groups and organisation structure has intentionally not been started.
+## Stage 3 features
+
+- Flexible hierarchy of Regions, Districts, Branches, Communities, and Groups
+- Parent/child organisation structure such as Region → District → Group
+- Member assignment to structure units
+- Member leaders and responsible Field Officers
+- Search and filtering by unit type
+- Hierarchy-cycle prevention and tenant-safe relationship validation
+- Admin/Manager structure management with read access for Field Officers
+
+Stage 4 farms and crops has intentionally not been started.
 
 ## Requirements
 
@@ -113,6 +123,7 @@ docker compose run --rm web python -m pytest
 apps/accounts/          Custom email-based user model
 apps/organisations/     Organisations, memberships, roles, invitations, tenant middleware
 apps/members/           Tenant-scoped members, files, imports, history, and workflows
+apps/groups/            Hierarchical structure, groups, leaders, officers, and assignments
 apps/core/              Shared application foundation for later stages
 config/                 Django settings and URL configuration
 templates/              Responsive server-rendered interface

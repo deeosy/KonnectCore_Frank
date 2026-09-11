@@ -2,13 +2,14 @@
 
 ## Current scope
 
-The repository is a Django modular monolith. Stages 1–2 implement authentication, organisation workspaces, role-based staff access, controlled onboarding, the tenant boundary, and member management. Groups and later operational modules have not been started.
+The repository is a Django modular monolith. Stages 1–3 implement authentication, organisation workspaces, role-based staff access, controlled onboarding, the tenant boundary, member management, and hierarchical organisation structure. Farms and later operational modules have not been started.
 
 ## Modules
 
 - `apps.accounts`: custom user model using a unique email address as the login identifier.
 - `apps.organisations`: organisations, account status, user memberships, roles, invitations, active-organisation middleware, onboarding views, and role decorators.
 - `apps.members`: organisation-owned members, private documents/photos, audit history, search/filtering, and transactional CSV/XLSX import.
+- `apps.groups`: self-referencing Regions, Districts, Branches, Communities, and Groups with tenant-safe leaders, Field Officers, and member assignments.
 - `apps.core`: reserved for shared abstractions used by later business modules.
 - `config`: environment-driven settings, root routes, WSGI, and ASGI configuration.
 - `templates` and `static`: responsive server-rendered UI.
@@ -34,6 +35,8 @@ A user with exactly one valid membership is automatically placed in that workspa
 - `Member`: UUID-addressed member identity with organisation-scoped membership-number uniqueness.
 - `MemberDocument`: private PDF/image attachment stored below the owning organisation/member path.
 - `MemberHistory`: actor-attributed create, update, document, and import history.
+- `StructureUnit`: UUID-addressed hierarchical unit with an optional parent, member leader, and active Field Officer membership.
+- `GroupMemberAssignment`: organisation-owned many-to-many assignment between a structure unit and member, with optional join date.
 
 ## Onboarding
 

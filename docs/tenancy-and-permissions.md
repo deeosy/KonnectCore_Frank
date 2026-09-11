@@ -33,6 +33,8 @@ Stage 1 enforces that only organisation Admins can list, create, or invite staff
 
 Stage 2 allows all active staff roles to view tenant-scoped member lists and profiles. Admins and Managers can register/edit members, attach documents, and import records. Field Officers remain read-only until assigned-member field workflows are implemented in Stage 7. Member detail, edit, file, search, and import operations are all derived from `request.organisation`; cross-tenant UUID guessing returns 404.
 
+Stage 3 applies the same policy to organisation structure. All active roles can view units and assignments; Admins and Managers can create/edit units and add/remove members. Parent units, leaders, responsible Field Officers, and assigned members must all belong to the active organisation. Responsible officers must be active Field Officer memberships. Hierarchy cycles and duplicate sibling/root names are rejected.
+
 ## Account status
 
 Only active organisations produce an active tenant context. Suspending or closing an organisation makes its workspace unavailable even when a user's membership remains active.
