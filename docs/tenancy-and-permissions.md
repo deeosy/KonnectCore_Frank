@@ -52,3 +52,15 @@ Invitations are scoped to one organisation, email, and role. Raw tokens are neve
 5. Two-tenant adversarial tests prove no list/detail/search/report/file leakage.
 6. Suspended organisations cannot use the module.
 7. PostgreSQL migrations and the complete test suite pass.
+
+## Stage 4 farm and crop controls
+
+- Crop, Farm, and FarmCropSeason rows require `organisation_id`.
+- Farm member choices and crop-season crop choices are built only from the active organisation.
+- Farm, crop, and season detail/edit routes use tenant-scoped querysets; foreign UUIDs return HTTP 404.
+- Farm-to-member, season-to-farm, and season-to-crop ownership is validated at model level.
+- Search and crop filters begin with an organisation-scoped farm queryset. Unknown, malformed, or foreign crop filters are ignored and never broaden access beyond that queryset.
+- Admins and Managers may mutate farm and crop records. Field Officers are read-only in Stage 4.
+- Member profiles prefetch and show only farms reachable from the already tenant-scoped member record.
+
+Any later collection or field-work feature must obtain farm and crop references from active-organisation querysets and must not accept an unscoped foreign key from request data.

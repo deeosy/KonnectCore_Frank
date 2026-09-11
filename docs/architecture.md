@@ -53,3 +53,15 @@ Development uploads will be stored under `media/`, excluded from Git. Django's s
 ## Extension guidance
 
 Every business model introduced in later stages must inherit or reproduce the organisation ownership contract, carry a non-null organisation foreign key, validate cross-model organisation consistency, and be queried from `request.organisation`. Add adversarial cross-tenant tests before considering each module complete.
+
+## Farms and crops (Stage 4)
+
+`apps.farms` owns three organisation-scoped models:
+
+- `Crop`: an organisation-specific crop and optional variety catalogue.
+- `Farm`: a named member farm with optional size, location, paired GPS coordinates, and notes.
+- `FarmCropSeason`: a crop planted on a farm for a named season or planting period, with optional planting dates and estimated/actual yield.
+
+A member may have multiple farms. A farm may have multiple crop-season records. Crops are protected from deletion while referenced. Admins and Managers maintain this data; Field Officers have read access until Stage 7 introduces assigned-member field workflows. Farm history is visible from both the farm screen and member profile.
+
+All forms receive the active organisation explicitly. Member and crop choices are tenant-scoped, every route resolves objects through `.for_organisation(request.organisation)`, and models validate relationship ownership. GPS values must be supplied as a valid latitude/longitude pair; farm sizes and yields cannot be negative; planting end cannot precede planting start.

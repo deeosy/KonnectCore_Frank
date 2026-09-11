@@ -40,7 +40,7 @@ def member_list(request):
 @organisation_required
 def member_detail(request, member_id):
     member = get_object_or_404(
-        Member.objects.for_organisation(request.organisation).prefetch_related("documents", "history__actor"),
+        Member.objects.for_organisation(request.organisation).prefetch_related("documents", "history__actor", "farms__crop_seasons__crop"),
         pk=member_id,
     )
     return render(request, "members/member_detail.html", {"member": member})
