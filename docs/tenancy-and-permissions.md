@@ -83,3 +83,7 @@ Financial records, member choices, lookups, filters, and member-profile history 
 ## Stage 7 field controls
 
 Field Officer access is the intersection of active organisation membership and members assigned to active structure units for which that exact membership is responsible. All visit, farm, and collection actions resolve the member from this scoped queryset. Cross-tenant and unassigned members return 404.
+
+## Stage 8 reporting controls
+
+Dashboard metrics, report tables, filters, and export generators begin with tenant-scoped querysets. Foreign member, group, and crop identifiers are ignored rather than broadening scope. Admin/Manager export authorization is enforced server-side. Cross-tenant export tests cover CSV and XLSX content.

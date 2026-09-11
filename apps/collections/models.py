@@ -78,7 +78,9 @@ class CollectionRecord(OrganisationOwnedModel):
     def calculate_total(self):
         if self.quantity is None or self.price_per_unit is None:
             return Decimal("0.00")
-        return (self.quantity * self.price_per_unit).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        quantity = Decimal(str(self.quantity))
+        price = Decimal(str(self.price_per_unit))
+        return (quantity * price).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
     def save(self, *args, **kwargs):
         self.total_value = self.calculate_total()

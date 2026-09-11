@@ -79,3 +79,7 @@ Collection photos are stored below the organisation media namespace and are serv
 ## Field workspace (Stage 7)
 
 `apps.field` provides a mobile-first workspace. Field Officer member scope is derived from active structure units assigned to that officer; member UUIDs outside that scope return 404. Officers can register members, update assigned-member farms, record visits with notes/GPS/photos, and record collections. Admins and Managers may inspect the field member list but cannot use officer-only mutation routes.
+
+## Dashboard and reports (Stage 8)
+
+`apps.reports` provides organisation-scoped dashboard metrics and operational reports for members, collections, finance, and groups. Filters support member, group, crop, payment status, and date range. Admins and Managers can export CSV or XLSX; Field Officers may view reports but cannot export. Export rows are always derived from the active organisation queryset.
