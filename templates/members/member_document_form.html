@@ -1,3 +1,4 @@
 {% extends "base.html" %}
 {% block title %}Attach document · {{ member.full_name }}{% endblock %}
+{% block header_title %}Member documents{% endblock %}
 {% block content %}<section class="form-card"><p class="eyebrow">{{ member.full_name }}</p><h1>Attach document</h1><p class="muted">PDF or image, maximum 10 MB.</p><form method="post" enctype="multipart/form-data" class="stack">{% csrf_token %}{{ form.as_p }}<button class="button">Attach document</button></form></section>{% endblock %}

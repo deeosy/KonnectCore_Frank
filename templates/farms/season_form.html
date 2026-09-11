@@ -1,3 +1,4 @@
 {% extends "base.html" %}
 {% block title %}{{ title }}{% endblock %}
+{% block header_title %}Crop season{% endblock %}
 {% block content %}<div class="form-card wide"><p class="eyebrow"><a href="{% url 'farm_detail' farm.id %}">{{ farm.name }}</a></p><h1>{{ title }}</h1><p class="muted">{{ farm.member.full_name }} · {{ farm.location|default:"Location not recorded" }}</p><form method="post" class="stack form-grid" novalidate>{% csrf_token %}{{ form.as_p }}<div class="form-actions"><a href="{% url 'farm_detail' farm.id %}">Cancel</a><button class="button" type="submit">Save crop season</button></div></form></div>{% endblock %}

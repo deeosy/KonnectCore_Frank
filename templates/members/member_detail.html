@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}{{ member.full_name }} · Members{% endblock %}
+{% block header_title %}Member profile{% endblock %}
 {% block content %}
 <div class="page-head"><div><p class="eyebrow"><a href="{% url 'member_list' %}">Members</a> / {{ member.membership_number }}</p><h1>{{ member.full_name }}</h1><span class="status status-{{ member.status }}">{{ member.get_status_display }}</span></div>{% if active_membership.role == "admin" or active_membership.role == "manager" %}<div class="actions"><a class="button secondary" href="{% url 'member_document_add' member.id %}">Attach document</a> <a class="button" href="{% url 'member_edit' member.id %}">Edit member</a></div>{% endif %}</div>
 <div class="profile-grid">

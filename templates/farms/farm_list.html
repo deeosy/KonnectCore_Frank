@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Farms and crops{% endblock %}
+{% block header_title %}Farms & Crops{% endblock %}
 {% block content %}
 <div class="page-head"><div><p class="eyebrow">Organisation workspace</p><h1>Farms and crops</h1><p class="muted">Maintain farm locations, crop seasons and yield records.</p></div><div class="actions"><a class="button secondary" href="{% url 'crop_list' %}">Crop catalogue</a>{% if active_membership.role == "admin" or active_membership.role == "manager" %}<a class="button" href="{% url 'farm_create' %}">Register farm</a>{% endif %}</div></div>
 <form class="filter-bar" method="get"><label><span>Search</span><input name="q" value="{{ query }}" placeholder="Farm, member, number or location"></label><label><span>Crop</span><select name="crop"><option value="">All crops</option>{% for crop in crops %}<option value="{{ crop.id }}"{% if selected_crop == crop.id|stringformat:'s' %} selected{% endif %}>{{ crop.display_name }}</option>{% endfor %}</select></label><button class="button" type="submit">Filter</button><a class="button secondary" href="{% url 'farm_list' %}">Clear</a></form>

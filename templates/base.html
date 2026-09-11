@@ -1,1 +1,52 @@
-﻿<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{% block title %}KonnectCore{% endblock %}</title><link rel="stylesheet" href="/static/css/app.css"></head><body><header class="topbar"><a class="brand" href="/">KonnectCore</a>{% if user.is_authenticated %}<div class="top-actions">{% if active_organisation %}<span>{{ active_organisation.name }}</span>{% endif %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="link-button">Sign out</button></form></div>{% endif %}</header><main class="container">{% for message in messages %}<div class="message">{{ message }}</div>{% endfor %}{% block content %}{% endblock %}</main></body></html>
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0f5132">
+  <title>{% block title %}KonnectCore{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body class="{% if user.is_authenticated %}is-authenticated{% else %}is-public{% endif %}">
+{% if user.is_authenticated %}
+  <input class="nav-toggle" type="checkbox" id="nav-toggle" aria-hidden="true">
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Primary navigation">
+      <div class="sidebar-brand">
+        <a href="{% if user.is_superuser %}{% url 'platform_organisations' %}{% else %}{% url 'workspace' %}{% endif %}" class="brand-lockup">
+          <span class="brand-mark" aria-hidden="true">K</span>
+          <span><strong>KonnectCore</strong><small>Organisation OS</small></span>
+        </a>
+        <label class="nav-close" for="nav-toggle" aria-label="Close navigation">×</label>
+      </div>
+      {% if active_organisation %}
+      <div class="workspace-chip"><span class="workspace-avatar">{{ active_organisation.name|first|upper }}</span><span><small>Workspace</small><strong>{{ active_organisation.name }}</strong></span></div>
+      <nav class="sidebar-nav">
+        <p class="nav-label">Workspace</p>
+        <a class="nav-item {% if request.resolver_match.url_name == 'dashboard' or request.resolver_match.url_name == 'workspace' %}active{% endif %}" href="{% url 'dashboard' %}"><span class="nav-icon">▦</span>Dashboard</a>
+        <a class="nav-item {% if 'member' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'member_list' %}"><span class="nav-icon">◎</span>Members</a>
+        <a class="nav-item {% if 'structure' in request.resolver_match.url_name or 'assignment' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'structure_list' %}"><span class="nav-icon">⌘</span>Groups</a>
+        <a class="nav-item {% if 'farm' in request.resolver_match.url_name or 'crop' in request.resolver_match.url_name or 'season' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'farm_list' %}"><span class="nav-icon">◇</span>Farms &amp; Crops</a>
+        <a class="nav-item {% if 'collection' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'collection_list' %}"><span class="nav-icon">⇣</span>Collections</a>
+        <a class="nav-item {% if 'finance' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'finance_list' %}"><span class="nav-icon">¤</span>Payments &amp; Dues</a>
+        <a class="nav-item {% if 'field_' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'field_home' %}"><span class="nav-icon">⌖</span>Field Workspace</a>
+        <a class="nav-item {% if 'report' in request.resolver_match.url_name and request.resolver_match.url_name != 'dashboard' %}active{% endif %}" href="{% url 'reports_home' %}"><span class="nav-icon">≡</span>Reports</a>
+        {% if active_membership.role == 'admin' %}<p class="nav-label nav-label-spaced">Administration</p><a class="nav-item {% if 'staff_' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'staff_list' %}"><span class="nav-icon">⚙</span>Staff / Settings</a>{% endif %}
+      </nav>
+      {% elif user.is_superuser %}
+      <nav class="sidebar-nav"><p class="nav-label">Platform</p><a class="nav-item active" href="{% url 'platform_organisations' %}"><span class="nav-icon">▦</span>Organisations</a><a class="nav-item" href="{% url 'platform_organisation_create' %}"><span class="nav-icon">＋</span>Create workspace</a></nav>
+      {% endif %}
+      <div class="sidebar-footer"><span class="user-avatar">{{ user.email|first|upper }}</span><span class="user-meta"><strong>{{ user.get_full_name|default:user.email }}</strong><small>{% if user.is_superuser %}Super Admin{% elif active_membership %}{{ active_membership.get_role_display }}{% endif %}</small></span><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="icon-button" title="Sign out" aria-label="Sign out">↗</button></form></div>
+    </aside>
+    <label class="nav-overlay" for="nav-toggle" aria-hidden="true"></label>
+    <div class="app-main">
+      <header class="app-topbar"><label class="menu-button" for="nav-toggle" aria-label="Open navigation">☰</label><div class="topbar-context"><small>{% if user.is_superuser %}KonnectCore Platform{% else %}{{ active_organisation.name }}{% endif %}</small><strong>{% block header_title %}Workspace{% endblock %}</strong></div><div class="topbar-user"><span class="user-avatar">{{ user.email|first|upper }}</span><span><strong>{{ user.get_full_name|default:user.email }}</strong><small>{% if user.is_superuser %}Super Admin{% elif active_membership %}{{ active_membership.get_role_display }}{% endif %}</small></span></div></header>
+      <main class="content"><div class="content-inner">{% for message in messages %}<div class="message" role="status"><span>✓</span>{{ message }}</div>{% endfor %}{% block content %}{% endblock %}</div></main>
+    </div>
+  </div>
+{% else %}
+  <main class="public-shell"><a class="public-brand" href="/"><span class="brand-mark">K</span><strong>KonnectCore</strong></a>{% for message in messages %}<div class="message" role="status">{{ message }}</div>{% endfor %}{% block public_content %}{% block content_public %}{% endblock %}{% endblock %}</main>
+{% endif %}
+</body>
+</html>

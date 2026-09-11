@@ -29,7 +29,8 @@ def choose_organisation(request):
 
 @organisation_required
 def workspace(request):
-    return render(request, "organisations/workspace.html")
+    from apps.reports.views import dashboard
+    return dashboard(request)
 
 @admin_required
 def staff_list(request):

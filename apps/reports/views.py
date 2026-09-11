@@ -8,9 +8,9 @@ from django.utils.dateparse import parse_date
 from openpyxl import Workbook
 from apps.collections.models import CollectionRecord
 from apps.finance.models import FinancialRecord
-from apps.farms.models import Crop
+from apps.farms.models import Crop, Farm
 from apps.groups.models import GroupMemberAssignment,StructureUnit
-from apps.members.models import Member
+from apps.members.models import Member, MemberHistory
 from apps.organisations.decorators import manager_or_admin_required,organisation_required
 
 def _filters(request, queryset, kind):
@@ -34,16 +34,38 @@ def _filters(request, queryset, kind):
 
 @organisation_required
 def dashboard(request):
-    org=request.organisation
-    members=Member.objects.for_organisation(org);collections=CollectionRecord.objects.for_organisation(org);finance=FinancialRecord.objects.for_organisation(org)
-    quantities=list(collections.values("quantity_unit").annotate(total=Sum("quantity")).order_by("quantity_unit"))
-    payment_rows=finance.exclude(record_type=FinancialRecord.Type.EXPENSE)
-    payments=sum((row.paid_amount for row in payment_rows),0)
-    outstanding_rows=finance.filter(record_type__in=[FinancialRecord.Type.MEMBER_PAYMENT,FinancialRecord.Type.DUE]).exclude(status=FinancialRecord.Status.CANCELLED)
-    outstanding=sum((row.outstanding_amount for row in outstanding_rows),0)
-    metrics={"members":members.count(),"active_members":members.filter(status=Member.Status.ACTIVE).count(),"groups":StructureUnit.objects.for_organisation(org).filter(unit_type=StructureUnit.Type.GROUP,is_active=True).count(),"collections":collections.count(),"quantities":quantities,"payments":payments,"outstanding":outstanding}
-    return render(request,"reports/dashboard.html",{"metrics":metrics})
-
+    org = request.organisation
+    members = Member.objects.for_organisation(org)
+    collections = CollectionRecord.objects.for_organisation(org).select_related("member", "crop", "recorded_by")
+    finance = FinancialRecord.objects.for_organisation(org).select_related("member", "recorded_by")
+    quantities = list(collections.values("quantity_unit").annotate(total=Sum("quantity")).order_by("quantity_unit"))
+    payment_rows = finance.exclude(record_type=FinancialRecord.Type.EXPENSE)
+    payments = sum((row.paid_amount for row in payment_rows), 0)
+    outstanding_rows = finance.filter(
+        record_type__in=[FinancialRecord.Type.MEMBER_PAYMENT, FinancialRecord.Type.DUE]
+    ).exclude(status=FinancialRecord.Status.CANCELLED)
+    outstanding = sum((row.outstanding_amount for row in outstanding_rows), 0)
+    groups = StructureUnit.objects.for_organisation(org).filter(
+        unit_type=StructureUnit.Type.GROUP, is_active=True
+    )
+    metrics = {
+        "members": members.count(),
+        "active_members": members.filter(status=Member.Status.ACTIVE).count(),
+        "groups": groups.count(),
+        "farms": Farm.objects.for_organisation(org).count(),
+        "collections": collections.count(),
+        "quantities": quantities,
+        "payments": payments,
+        "outstanding": outstanding,
+    }
+    return render(request, "reports/dashboard.html", {
+        "metrics": metrics,
+        "recent_collections": collections[:5],
+        "recent_payments": finance[:5],
+        "group_summary": groups.annotate(total_members=Count("member_assignments")).order_by("-total_members", "name")[:6],
+        "crop_totals": collections.values("crop__name", "crop__variety", "quantity_unit").annotate(total=Sum("quantity")).order_by("-total")[:6],
+        "recent_activity": MemberHistory.objects.for_organisation(org).select_related("member", "actor")[:6],
+    })
 @organisation_required
 def reports_home(request):
     org=request.organisation

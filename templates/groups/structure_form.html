@@ -1,3 +1,4 @@
 {% extends "base.html" %}
 {% block title %}{{ title }} · KonnectCore{% endblock %}
+{% block header_title %}Groups{% endblock %}
 {% block content %}<section class="form-card wide"><p class="eyebrow"><a href="{% url 'structure_list' %}">Groups and structure</a></p><h1>{{ title }}</h1><p class="muted">Build a hierarchy such as Region → District → Group.</p><form method="post" class="form-grid">{% csrf_token %}{{ form.as_p }}<div class="form-actions"><a href="{% if unit %}{% url 'structure_detail' unit.id %}{% else %}{% url 'structure_list' %}{% endif %}">Cancel</a><button class="button">Save unit</button></div></form></section>{% endblock %}
