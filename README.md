@@ -38,7 +38,7 @@ This repository currently contains **Stages 1–3**: authentication, private org
 - Hierarchy-cycle prevention and tenant-safe relationship validation
 - Admin/Manager structure management with read access for Field Officers
 
-Stage 4 farms and crops is complete. Stage 5 produce collections is complete. Stages 6, 7, and 8 are complete. Stage 9 remains.
+Stage 4 farms and crops is complete. Stage 5 produce collections is complete. All nine validation MVP stages are complete.
 
 ## Requirements
 

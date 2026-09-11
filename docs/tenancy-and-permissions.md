@@ -87,3 +87,7 @@ Field Officer access is the intersection of active organisation membership and m
 ## Stage 8 reporting controls
 
 Dashboard metrics, report tables, filters, and export generators begin with tenant-scoped querysets. Foreign member, group, and crop identifiers are ignored rather than broadening scope. Admin/Manager export authorization is enforced server-side. Cross-tenant export tests cover CSV and XLSX content.
+
+## Stage 9 platform controls
+
+Platform organisation list, detail, and status-management routes require Django superuser status. Ordinary organisation users are redirected to login even when authenticated. Suspending or closing an organisation immediately prevents its staff from selecting or accessing that workspace; business data remains stored and isolated.

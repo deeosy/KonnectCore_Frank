@@ -83,3 +83,7 @@ Collection photos are stored below the organisation media namespace and are serv
 ## Dashboard and reports (Stage 8)
 
 `apps.reports` provides organisation-scoped dashboard metrics and operational reports for members, collections, finance, and groups. Filters support member, group, crop, payment status, and date range. Admins and Managers can export CSV or XLSX; Field Officers may view reports but cannot export. Export rows are always derived from the active organisation queryset.
+
+## KonnectCore Super Admin (Stage 9)
+
+The owner-only platform area lists every organisation with its join date, active user count, member count, currency, and account status. A detail screen shows staff memberships and allows a KonnectCore Super Admin to activate, suspend, or close an account. Public organisation registration remains disabled; platform owners create each workspace and its first Admin invitation.

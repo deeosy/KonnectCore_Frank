@@ -1,12 +1,12 @@
-﻿from django.contrib import messages
+from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.exceptions import PermissionDenied
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from .decorators import admin_required, organisation_required
-from .forms import AcceptInvitationForm, PlatformOrganisationForm, StaffCreateForm, StaffInviteForm
+from .forms import AcceptInvitationForm, PlatformOrganisationForm, PlatformOrganisationStatusForm, StaffCreateForm, StaffInviteForm
 from .invitations import StaffInvitation
 from .middleware import ActiveOrganisationMiddleware
 from .models import Organisation, OrganisationMembership
@@ -71,7 +71,7 @@ def accept_invitation(request, token):
 
 @user_passes_test(lambda u: u.is_superuser, login_url="login")
 def platform_organisations(request):
-    organisations = Organisation.objects.annotate(user_count=Count("memberships", distinct=True)).order_by("name")
+    organisations = Organisation.objects.annotate(user_count=Count("memberships", filter=Q(memberships__is_active=True), distinct=True), member_count=Count("member", distinct=True)).order_by("name")
     return render(request, "platform/organisation_list.html", {"organisations": organisations})
 
 @user_passes_test(lambda u: u.is_superuser, login_url="login")
@@ -83,3 +83,24 @@ def platform_organisation_create(request):
         invite_url = request.build_absolute_uri(f"/invitations/{token}/accept/")
         messages.success(request, "Organisation created. Share the first Admin invitation link below.")
     return render(request, "platform/organisation_form.html", {"form": form, "invite_url": invite_url})
+
+@user_passes_test(lambda u: u.is_superuser, login_url="login")
+def platform_organisation_detail(request, organisation_id):
+    organisation = get_object_or_404(
+        Organisation.objects.annotate(
+            user_count=Count("memberships", filter=Q(memberships__is_active=True), distinct=True),
+            member_count=Count("member", distinct=True),
+        ),
+        pk=organisation_id,
+    )
+    memberships = organisation.memberships.select_related("user").order_by("role", "user__email")
+    form = PlatformOrganisationStatusForm(request.POST or None, instance=organisation)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Organisation account status updated.")
+        return redirect("platform_organisation_detail", organisation_id=organisation.pk)
+    return render(request, "platform/organisation_detail.html", {
+        "organisation": organisation,
+        "memberships": memberships,
+        "form": form,
+    })

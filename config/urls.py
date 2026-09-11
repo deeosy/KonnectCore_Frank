@@ -25,4 +25,5 @@ urlpatterns = [
     path("invitations/<str:token>/accept/", views.accept_invitation, name="accept_invitation"),
     path("platform/organisations/", views.platform_organisations, name="platform_organisations"),
     path("platform/organisations/create/", views.platform_organisation_create, name="platform_organisation_create"),
+    path("platform/organisations/<int:organisation_id>/", views.platform_organisation_detail, name="platform_organisation_detail"),
 ]

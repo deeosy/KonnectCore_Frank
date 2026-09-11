@@ -136,3 +136,44 @@ class InvitationSecurityTests(TenantFixture):
         invitation.expires_at = timezone.now() - timezone.timedelta(seconds=1)
         invitation.save(update_fields=["expires_at"])
         self.assertEqual(self.client.get(reverse("accept_invitation", args=[token])).status_code, 403)
+
+class PlatformAdministrationTests(TenantFixture):
+    def setUp(self):
+        super().setUp()
+        self.owner = User.objects.create_superuser(email="platform-owner@konnectcore.test", password="OwnerPass!63")
+
+    def test_platform_list_shows_user_and_member_counts(self):
+        from apps.members.models import Member
+        Member.objects.create(organisation=self.alpha, created_by=self.alpha_admin, updated_by=self.alpha_admin, membership_number="COUNT-1", first_name="Count", last_name="Member")
+        self.client.force_login(self.owner)
+        response = self.client.get(reverse("platform_organisations"))
+        self.assertContains(response, "Alpha Cooperative")
+        self.assertContains(response, reverse("platform_organisation_detail", args=[self.alpha.pk]))
+        alpha = response.context["organisations"].get(pk=self.alpha.pk)
+        self.assertEqual(alpha.user_count, 3)
+        self.assertEqual(alpha.member_count, 1)
+
+    def test_only_super_admin_can_open_platform_detail(self):
+        self.login_as(self.alpha_admin, self.alpha)
+        url = reverse("platform_organisation_detail", args=[self.alpha.pk])
+        self.assertRedirects(self.client.get(url), f"{reverse('login')}?next={url}")
+        self.client.force_login(self.owner)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.alpha_admin.email)
+        self.assertNotContains(response, self.beta_admin.email)
+
+    def test_super_admin_can_suspend_organisation(self):
+        self.client.force_login(self.owner)
+        url = reverse("platform_organisation_detail", args=[self.alpha.pk])
+        response = self.client.post(url, {"status": Organisation.Status.SUSPENDED})
+        self.assertRedirects(response, url)
+        self.alpha.refresh_from_db()
+        self.assertEqual(self.alpha.status, Organisation.Status.SUSPENDED)
+        self.client.logout()
+        self.login_as(self.alpha_admin, self.alpha)
+        self.assertRedirects(self.client.get(reverse("workspace")), reverse("choose_organisation"))
+
+    def test_platform_detail_unknown_organisation_is_404(self):
+        self.client.force_login(self.owner)
+        self.assertEqual(self.client.get(reverse("platform_organisation_detail", args=[999999])).status_code, 404)

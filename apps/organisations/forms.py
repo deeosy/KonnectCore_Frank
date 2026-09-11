@@ -30,6 +30,11 @@ class PlatformOrganisationForm(forms.ModelForm):
         invitation, token = StaffInvitation.issue(organisation=organisation, email=self.cleaned_data["admin_email"], role=OrganisationMembership.Role.ADMIN, invited_by=created_by)
         return organisation, invitation, token
 
+class PlatformOrganisationStatusForm(forms.ModelForm):
+    class Meta:
+        model = Organisation
+        fields = ["status"]
+
 class StaffCreateForm(UserCreationForm):
     role = forms.ChoiceField(choices=OrganisationMembership.Role.choices)
     class Meta(UserCreationForm.Meta):
