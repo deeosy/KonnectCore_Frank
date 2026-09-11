@@ -17,6 +17,7 @@ urlpatterns = [
     path("workspace/farms/", include("apps.farms.urls")),
     path("workspace/collections/", include("apps.collections.urls")),
     path("workspace/finance/", include("apps.finance.urls")),
+    path("field/", include("apps.field.urls")),
     path("workspace/staff/", views.staff_list, name="staff_list"),
     path("workspace/staff/create/", views.staff_create, name="staff_create"),
     path("workspace/staff/invite/", views.staff_invite, name="staff_invite"),

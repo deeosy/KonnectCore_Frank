@@ -79,3 +79,7 @@ Future finance, field, dashboard, and export code must resolve collection record
 ## Stage 6 finance controls
 
 Financial records, member choices, lookups, filters, and member-profile history are organisation-scoped. Cross-tenant UUIDs return 404 or fail form/model validation. The recorder is server-controlled. Admins and Managers mutate; Field Officers are read-only.
+
+## Stage 7 field controls
+
+Field Officer access is the intersection of active organisation membership and members assigned to active structure units for which that exact membership is responsible. All visit, farm, and collection actions resolve the member from this scoped queryset. Cross-tenant and unassigned members return 404.

@@ -75,3 +75,7 @@ Collection photos are stored below the organisation media namespace and are serv
 ## Finance (Stage 6)
 
 `apps.finance` stores tenant-scoped payments to members, dues, contributions, optional savings, and organisation expenses. It is an operational register, not double-entry accounting. Amount, paid amount, status, method, date, reference, notes, and original recorder are retained. Outstanding value is derived from amount less paid amount, with cancelled records excluded.
+
+## Field workspace (Stage 7)
+
+`apps.field` provides a mobile-first workspace. Field Officer member scope is derived from active structure units assigned to that officer; member UUIDs outside that scope return 404. Officers can register members, update assigned-member farms, record visits with notes/GPS/photos, and record collections. Admins and Managers may inspect the field member list but cannot use officer-only mutation routes.
