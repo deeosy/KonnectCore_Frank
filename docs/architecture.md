@@ -65,3 +65,10 @@ Every business model introduced in later stages must inherit or reproduce the or
 A member may have multiple farms. A farm may have multiple crop-season records. Crops are protected from deletion while referenced. Admins and Managers maintain this data; Field Officers have read access until Stage 7 introduces assigned-member field workflows. Farm history is visible from both the farm screen and member profile.
 
 All forms receive the active organisation explicitly. Member and crop choices are tenant-scoped, every route resolves objects through `.for_organisation(request.organisation)`, and models validate relationship ownership. GPS values must be supplied as a valid latitude/longitude pair; farm sizes and yields cannot be negative; planting end cannot precede planting start.
+## Produce collections (Stage 5)
+
+`apps.collections` owns `CollectionRecord`, an organisation-scoped record linking a member and crop to a collection date, location, quantity/unit, quality grade, unit price, calculated total value, optional photo, notes, and the staff user who originally recorded it.
+
+The model calculates `total_value = quantity × price_per_unit` with decimal arithmetic and currency precision on every save. The original recorder is server-controlled and remains unchanged when another authorised staff member edits the record. Admins and Managers may create and edit collections; Field Officers have read access until Stage 7 adds their assigned-member field workflow.
+
+Collection photos are stored below the organisation media namespace and are served only through authenticated, tenant-scoped views. Collection history appears on the already tenant-scoped member profile. Filters support member, crop, date range, location, grade, membership number, and member name; report export remains Stage 8.

@@ -1,0 +1,3 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}<div class="form-card wide"><p class="eyebrow">Produce collections</p><h1>{{ title }}</h1><p class="muted">Total value is calculated automatically as quantity × price per unit in {{ active_organisation.currency }}.</p><form method="post" enctype="multipart/form-data" class="stack form-grid" novalidate>{% csrf_token %}{{ form.as_p }}<div class="form-actions">{% if record %}<a href="{% url 'collection_detail' record.id %}">Cancel</a>{% else %}<a href="{% url 'collection_list' %}">Cancel</a>{% endif %}<button class="button" type="submit">Save collection</button></div></form></div>{% endblock %}

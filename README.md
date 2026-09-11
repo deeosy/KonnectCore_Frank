@@ -34,10 +34,11 @@ This repository currently contains **Stages 1–3**: authentication, private org
 - Member leaders and responsible Field Officers
 - Search and filtering by unit type
 - Tenant-scoped crop catalogue, farm profiles, GPS coordinates, planting periods, and yield history
+- Tenant-scoped produce collections with quantities, grades, prices, automatic totals, photos, and member history
 - Hierarchy-cycle prevention and tenant-safe relationship validation
 - Admin/Manager structure management with read access for Field Officers
 
-Stage 4 farms and crops is complete. Stage 5 produce collections has intentionally not been started.
+Stage 4 farms and crops is complete. Stage 5 produce collections is complete. Stage 6 payments and dues has intentionally not been started.
 
 ## Requirements
 
@@ -126,6 +127,7 @@ apps/organisations/     Organisations, memberships, roles, invitations, tenant m
 apps/members/           Tenant-scoped members, files, imports, history, and workflows
 apps/groups/            Hierarchical structure, groups, leaders, officers, and assignments
 apps/farms/             Tenant-scoped crops, farms, GPS, seasons, and yields
+apps/collections/       Tenant-scoped produce collection records, values, and photos
 apps/core/              Shared application foundation for later stages
 config/                 Django settings and URL configuration
 templates/              Responsive server-rendered interface

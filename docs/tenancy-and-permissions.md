@@ -64,3 +64,15 @@ Invitations are scoped to one organisation, email, and role. Raw tokens are neve
 - Member profiles prefetch and show only farms reachable from the already tenant-scoped member record.
 
 Any later collection or field-work feature must obtain farm and crop references from active-organisation querysets and must not accept an unscoped foreign key from request data.
+## Stage 5 collection controls
+
+- Every `CollectionRecord` requires `organisation_id` and links only to a member, crop, and recorder from that organisation.
+- Create/edit forms build member and crop choices exclusively from the active organisation. Foreign posted UUIDs fail form validation.
+- List, detail, edit, and photo views begin with `.for_organisation(request.organisation)`; guessed foreign record UUIDs return HTTP 404.
+- Collection photos are not exposed by a public media route. Authenticated tenant-scoped views stream them after ownership checks.
+- Quantity must be positive, price must be nonnegative, and total value is calculated server-side with decimal rounding. Database constraints reinforce these numeric invariants.
+- The original `recorded_by` user is assigned by the server and is not editable through request data.
+- Unknown, malformed, or foreign member/crop/date filters never broaden the base organisation-scoped queryset.
+- Admins and Managers may mutate collection records. Field Officers are read-only in Stage 5; assigned-member collection entry belongs to Stage 7.
+
+Future finance, field, dashboard, and export code must resolve collection records from the active organisation and must never trust an organisation, member, crop, or recorder identifier supplied by the client without tenant-scoped validation.
