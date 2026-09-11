@@ -1,0 +1,85 @@
+﻿from django.contrib import messages
+from django.contrib.auth import login
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.core.exceptions import PermissionDenied
+from django.db.models import Count
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
+from .decorators import admin_required, organisation_required
+from .forms import AcceptInvitationForm, PlatformOrganisationForm, StaffCreateForm, StaffInviteForm
+from .invitations import StaffInvitation
+from .middleware import ActiveOrganisationMiddleware
+from .models import Organisation, OrganisationMembership
+
+@login_required
+def entrypoint(request):
+    if request.user.is_superuser: return redirect("platform_organisations")
+    if request.organisation: return redirect("workspace")
+    return redirect("choose_organisation")
+
+@login_required
+def choose_organisation(request):
+    if request.user.is_superuser: return redirect("platform_organisations")
+    memberships = OrganisationMembership.objects.select_related("organisation").filter(user=request.user, is_active=True, organisation__status=Organisation.Status.ACTIVE)
+    if request.method == "POST":
+        membership = get_object_or_404(memberships, organisation_id=request.POST.get("organisation"))
+        request.session[ActiveOrganisationMiddleware.SESSION_KEY] = membership.organisation_id
+        return redirect("workspace")
+    return render(request, "organisations/choose.html", {"memberships": memberships})
+
+@organisation_required
+def workspace(request):
+    return render(request, "organisations/workspace.html")
+
+@admin_required
+def staff_list(request):
+    staff = OrganisationMembership.objects.select_related("user").filter(organisation=request.organisation)
+    invitations = StaffInvitation.objects.filter(organisation=request.organisation, accepted_at__isnull=True)
+    return render(request, "organisations/staff_list.html", {"staff": staff, "invitations": invitations})
+
+@admin_required
+def staff_create(request):
+    form = StaffCreateForm(request.POST or None, organisation=request.organisation)
+    if request.method == "POST" and form.is_valid():
+        form.save(); messages.success(request, "Staff user created."); return redirect("staff_list")
+    return render(request, "organisations/form.html", {"form": form, "title": "Create staff user"})
+
+@admin_required
+def staff_invite(request):
+    form = StaffInviteForm(request.POST or None)
+    invite_url = None
+    if request.method == "POST" and form.is_valid():
+        existing = OrganisationMembership.objects.filter(organisation=request.organisation, user__email__iexact=form.cleaned_data["email"]).exists()
+        if existing:
+            form.add_error("email", "This user already belongs to the organisation.")
+        else:
+            _, token = StaffInvitation.issue(organisation=request.organisation, email=form.cleaned_data["email"], role=form.cleaned_data["role"], invited_by=request.user)
+            invite_url = request.build_absolute_uri(f"/invitations/{token}/accept/")
+            messages.success(request, "Invitation created. Share the secure link below; it expires in 7 days.")
+    return render(request, "organisations/form.html", {"form": form, "title": "Invite staff user", "invite_url": invite_url})
+
+def accept_invitation(request, token):
+    invitation = get_object_or_404(StaffInvitation.objects.select_related("organisation"), token_hash=StaffInvitation.digest(token))
+    if not invitation.is_valid: raise PermissionDenied("Invitation is invalid or expired.")
+    form = AcceptInvitationForm(request.POST or None, email=invitation.email)
+    if request.method == "POST" and form.is_valid():
+        user = form.save(invitation)
+        invitation.accepted_at = timezone.now(); invitation.save(update_fields=["accepted_at"])
+        login(request, user); request.session[ActiveOrganisationMiddleware.SESSION_KEY] = invitation.organisation_id
+        return redirect("workspace")
+    return render(request, "organisations/accept_invitation.html", {"form": form, "invitation": invitation})
+
+@user_passes_test(lambda u: u.is_superuser, login_url="login")
+def platform_organisations(request):
+    organisations = Organisation.objects.annotate(user_count=Count("memberships", distinct=True)).order_by("name")
+    return render(request, "platform/organisation_list.html", {"organisations": organisations})
+
+@user_passes_test(lambda u: u.is_superuser, login_url="login")
+def platform_organisation_create(request):
+    form = PlatformOrganisationForm(request.POST or None)
+    invite_url = None
+    if request.method == "POST" and form.is_valid():
+        _, _, token = form.save(created_by=request.user)
+        invite_url = request.build_absolute_uri(f"/invitations/{token}/accept/")
+        messages.success(request, "Organisation created. Share the first Admin invitation link below.")
+    return render(request, "platform/organisation_form.html", {"form": form, "invite_url": invite_url})
