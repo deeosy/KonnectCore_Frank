@@ -1,14 +1,12 @@
 from django.contrib import admin
-from django.contrib.auth import views as auth_views
 from django.urls import include, path
 
 from apps.organisations import views
-from apps.organisations.forms import LoginForm
 
 urlpatterns = [
     path("django-admin/", admin.site.urls),
-    path("login/", auth_views.LoginView.as_view(authentication_form=LoginForm), name="login"),
-    path("logout/", auth_views.LogoutView.as_view(), name="logout"),
+    path("login/", views.RoleAwareLoginView.as_view(), name="login"),
+    path("logout/", views.auth_views.LogoutView.as_view(), name="logout"),
     path("", views.entrypoint, name="entrypoint"),
     path("organisations/choose/", views.choose_organisation, name="choose_organisation"),
     path("workspace/", views.workspace, name="workspace"),

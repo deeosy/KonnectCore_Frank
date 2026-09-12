@@ -3,7 +3,7 @@ from io import BytesIO
 from django.db.models import Count,Sum
 from django.db.models.functions import Coalesce
 from django.http import HttpResponse
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.utils.dateparse import parse_date
 from openpyxl import Workbook
 from apps.collections.models import CollectionRecord
@@ -34,6 +34,8 @@ def _filters(request, queryset, kind):
 
 @organisation_required
 def dashboard(request):
+    if request.organisation_membership.role == "field_officer":
+        return redirect("field_home")
     org = request.organisation
     members = Member.objects.for_organisation(org)
     collections = CollectionRecord.objects.for_organisation(org).select_related("member", "crop", "recorded_by")

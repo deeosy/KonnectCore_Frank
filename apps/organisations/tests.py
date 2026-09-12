@@ -1,4 +1,4 @@
-﻿import re
+import re
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
@@ -43,6 +43,35 @@ class AuthenticationTests(TenantFixture):
         self.assertRedirects(response, reverse("workspace"), fetch_redirect_response=False)
         response = self.client.get(reverse("workspace"))
         self.assertContains(response, "Alpha Cooperative")
+
+    def test_manager_login_opens_organisation_dashboard(self):
+        response = self.client.post(reverse("login"), {
+            "username": self.manager.email,
+            "password": "CorrectHorse!42",
+        })
+        self.assertRedirects(response, reverse("workspace"), fetch_redirect_response=False)
+
+    def test_field_officer_login_opens_field_workspace(self):
+        response = self.client.post(reverse("login"), {
+            "username": self.field.email,
+            "password": "CorrectHorse!42",
+        })
+        self.assertRedirects(response, reverse("field_home"), fetch_redirect_response=False)
+        response = self.client.get(reverse("field_home"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "My assigned members")
+        self.assertNotContains(response, "Payments &amp; Dues")
+
+    def test_field_officer_workspace_entry_redirects_to_field_workspace(self):
+        self.login_as(self.field, self.alpha)
+        self.assertRedirects(self.client.get(reverse("workspace")), reverse("field_home"))
+
+    def test_explicit_safe_next_url_is_preserved(self):
+        response = self.client.post(
+            f"{reverse('login')}?next={reverse('field_home')}",
+            {"username": self.field.email, "password": "CorrectHorse!42"},
+        )
+        self.assertRedirects(response, reverse("field_home"), fetch_redirect_response=False)
 
 class TenantIsolationTests(TenantFixture):
     def test_forged_session_cannot_select_another_organisation(self):
@@ -125,7 +154,7 @@ class InvitationSecurityTests(TenantFixture):
         self.assertEqual(len(invitation.token_hash), 64)
         url = reverse("accept_invitation", args=[token])
         response = self.client.post(url, {"first_name": "Ivy", "last_name": "Officer", "password1": "StrongPass!942", "password2": "StrongPass!942"})
-        self.assertRedirects(response, reverse("workspace"))
+        self.assertRedirects(response, reverse("field_home"))
         membership = OrganisationMembership.objects.get(user__email="invitee@alpha.test", organisation=self.alpha)
         self.assertEqual(membership.role, OrganisationMembership.Role.FIELD_OFFICER)
         self.client.logout()

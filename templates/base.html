@@ -14,7 +14,7 @@
   <div class="app-shell">
     <aside class="sidebar" aria-label="Primary navigation">
       <div class="sidebar-brand">
-        <a href="{% if user.is_superuser %}{% url 'platform_organisations' %}{% else %}{% url 'workspace' %}{% endif %}" class="brand-lockup">
+        <a href="{% if user.is_superuser %}{% url 'platform_organisations' %}{% elif active_membership.role == 'field_officer' %}{% url 'field_home' %}{% else %}{% url 'workspace' %}{% endif %}" class="brand-lockup">
           <span class="brand-mark" aria-hidden="true">K</span>
           <span><strong>KonnectCore</strong><small>Organisation OS</small></span>
         </a>
@@ -24,6 +24,9 @@
       <div class="workspace-chip"><span class="workspace-avatar">{{ active_organisation.name|first|upper }}</span><span><small>Workspace</small><strong>{{ active_organisation.name }}</strong></span></div>
       <nav class="sidebar-nav">
         <p class="nav-label">Workspace</p>
+        {% if active_membership.role == 'field_officer' %}
+        <a class="nav-item active" href="{% url 'field_home' %}"><span class="nav-icon">◎</span>Field Workspace</a>
+        {% else %}
         <a class="nav-item {% if request.resolver_match.url_name == 'dashboard' or request.resolver_match.url_name == 'workspace' %}active{% endif %}" href="{% url 'dashboard' %}"><span class="nav-icon">▦</span>Dashboard</a>
         <a class="nav-item {% if 'member' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'member_list' %}"><span class="nav-icon">◎</span>Members</a>
         <a class="nav-item {% if 'structure' in request.resolver_match.url_name or 'assignment' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'structure_list' %}"><span class="nav-icon">⌘</span>Groups</a>
@@ -32,6 +35,7 @@
         <a class="nav-item {% if 'finance' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'finance_list' %}"><span class="nav-icon">¤</span>Payments &amp; Dues</a>
         <a class="nav-item {% if 'field_' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'field_home' %}"><span class="nav-icon">⌖</span>Field Workspace</a>
         <a class="nav-item {% if 'report' in request.resolver_match.url_name and request.resolver_match.url_name != 'dashboard' %}active{% endif %}" href="{% url 'reports_home' %}"><span class="nav-icon">≡</span>Reports</a>
+        {% endif %}
         {% if active_membership.role == 'admin' %}<p class="nav-label nav-label-spaced">Administration</p><a class="nav-item {% if 'staff_' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'staff_list' %}"><span class="nav-icon">⚙</span>Staff / Settings</a>{% endif %}
       </nav>
       {% elif user.is_superuser %}

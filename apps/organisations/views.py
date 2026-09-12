@@ -1,20 +1,47 @@
 from django.contrib import messages
-from django.contrib.auth import login
+from django.contrib.auth import login, views as auth_views
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.exceptions import PermissionDenied
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from .decorators import admin_required, organisation_required
-from .forms import AcceptInvitationForm, PlatformOrganisationForm, PlatformOrganisationStatusForm, StaffCreateForm, StaffInviteForm
+from .forms import AcceptInvitationForm, LoginForm, PlatformOrganisationForm, PlatformOrganisationStatusForm, StaffCreateForm, StaffInviteForm
 from .invitations import StaffInvitation
 from .middleware import ActiveOrganisationMiddleware
 from .models import Organisation, OrganisationMembership
 
+
+def membership_home(membership):
+    if membership.role == OrganisationMembership.Role.FIELD_OFFICER:
+        return "field_home"
+    return "workspace"
+
+
+class RoleAwareLoginView(auth_views.LoginView):
+    authentication_form = LoginForm
+
+    def get_success_url(self):
+        redirect_to = self.get_redirect_url()
+        if redirect_to:
+            return redirect_to
+        if self.request.user.is_superuser:
+            return redirect("platform_organisations").url
+        memberships = OrganisationMembership.objects.select_related("organisation").filter(
+            user=self.request.user,
+            is_active=True,
+            organisation__status=Organisation.Status.ACTIVE,
+        )
+        if memberships.count() == 1:
+            membership = memberships.first()
+            self.request.session[ActiveOrganisationMiddleware.SESSION_KEY] = membership.organisation_id
+            return redirect(membership_home(membership)).url
+        return redirect("choose_organisation").url
+
 @login_required
 def entrypoint(request):
     if request.user.is_superuser: return redirect("platform_organisations")
-    if request.organisation: return redirect("workspace")
+    if request.organisation: return redirect(membership_home(request.organisation_membership))
     return redirect("choose_organisation")
 
 @login_required
@@ -24,7 +51,7 @@ def choose_organisation(request):
     if request.method == "POST":
         membership = get_object_or_404(memberships, organisation_id=request.POST.get("organisation"))
         request.session[ActiveOrganisationMiddleware.SESSION_KEY] = membership.organisation_id
-        return redirect("workspace")
+        return redirect(membership_home(membership))
     return render(request, "organisations/choose.html", {"memberships": memberships})
 
 @organisation_required
@@ -67,7 +94,8 @@ def accept_invitation(request, token):
         user = form.save(invitation)
         invitation.accepted_at = timezone.now(); invitation.save(update_fields=["accepted_at"])
         login(request, user); request.session[ActiveOrganisationMiddleware.SESSION_KEY] = invitation.organisation_id
-        return redirect("workspace")
+        membership = OrganisationMembership.objects.get(user=user, organisation=invitation.organisation)
+        return redirect(membership_home(membership))
     return render(request, "organisations/accept_invitation.html", {"form": form, "invitation": invitation})
 
 @user_passes_test(lambda u: u.is_superuser, login_url="login")
