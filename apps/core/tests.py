@@ -1,4 +1,4 @@
-﻿from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.test import TestCase
 
@@ -7,7 +7,7 @@ from apps.farms.models import Farm
 from apps.field.models import FieldVisit
 from apps.finance.models import FinancialRecord
 from apps.groups.models import StructureUnit
-from apps.members.models import Member
+from apps.members.models import Member, MemberHistory
 from apps.organisations.models import Organisation, OrganisationMembership
 
 
@@ -38,6 +38,9 @@ class SeedDemoDataCommandTests(TestCase):
         self.assertEqual(self._counts(self.other), (0, 0, 0, 0, 0, 0))
         self.assertEqual(
             OrganisationMembership.objects.filter(organisation=self.organisation).count(), 4
+        )
+        self.assertFalse(
+            MemberHistory.objects.for_organisation(self.organisation).exclude(changes={}).exists()
         )
 
     @staticmethod

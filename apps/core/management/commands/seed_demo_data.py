@@ -1,4 +1,4 @@
-﻿from datetime import timedelta
+from datetime import timedelta
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
@@ -85,7 +85,7 @@ class Command(BaseCommand):
             if created:
                 MemberHistory.objects.create(
                     organisation=org, member=member, action=MemberHistory.Action.CREATED,
-                    changes={"source": "KonnectCore demo data"}, actor=admin,
+                    changes={}, actor=admin,
                 )
 
         region = self._unit(org, "Ashanti Region", StructureUnit.Type.REGION)
@@ -235,4 +235,3 @@ class Command(BaseCommand):
         if changed:
             unit.full_clean(); unit.save()
         return unit
-
