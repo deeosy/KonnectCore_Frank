@@ -26,12 +26,12 @@ Always:
 
 - **Admin**: organisation settings and staff administration; full organisation operational access as modules are added.
 - **Manager**: operational management but no staff or platform administration.
-- **Field Officer**: restricted field workflows and assigned scope in later stages.
+- **Field Officer**: assigned-member field workflows with a simplified role-specific workspace.
 - **KonnectCore Super Admin**: platform owner identity using Django superuser status; not an organisation role.
 
 Stage 1 enforces that only organisation Admins can list, create, or invite staff. Managers and Field Officers receive HTTP 403 for those operations. Organisation users cannot access platform administration.
 
-Stage 2 allows all active staff roles to view tenant-scoped member lists and profiles. Admins and Managers can register/edit members, attach documents, and import records. Field Officers remain read-only until assigned-member field workflows are implemented in Stage 7. Member detail, edit, file, search, and import operations are all derived from `request.organisation`; cross-tenant UUID guessing returns 404.
+Stage 2 allows all active staff roles to view tenant-scoped member lists and profiles. Admins and Managers can register/edit members, attach documents, and import records. Field Officers use the assigned-member Field Workspace implemented in Stage 7; broad member-management mutations remain restricted. Member detail, edit, file, search, and import operations are all derived from `request.organisation`; cross-tenant UUID guessing returns 404.
 
 Stage 3 applies the same policy to organisation structure. All active roles can view units and assignments; Admins and Managers can create/edit units and add/remove members. Parent units, leaders, responsible Field Officers, and assigned members must all belong to the active organisation. Responsible officers must be active Field Officer memberships. Hierarchy cycles and duplicate sibling/root names are rejected.
 
@@ -91,3 +91,20 @@ Dashboard metrics, report tables, filters, and export generators begin with tena
 ## Stage 9 platform controls
 
 Platform organisation list, detail, and status-management routes require Django superuser status. Ordinary organisation users are redirected to login even when authenticated. Suspending or closing an organisation immediately prevents its staff from selecting or accessing that workspace; business data remains stored and isolated.
+
+## Role-aware navigation and landing behavior
+
+Authentication destinations are enforced server-side, not only by navigation visibility:
+
+- KonnectCore Super Admins land in Platform Organisations.
+- Organisation Admins and Managers land on the organisation Dashboard.
+- Field Officers land in the Field Workspace.
+- Direct Field Officer requests for the broad dashboard redirect to the Field Workspace.
+- Safe explicit `next` destinations are preserved by Django's login handling.
+- Organisation selection and invitation acceptance use the same role-aware destination rules.
+
+The Field Officer sidebar exposes only the Field Workspace. Admin and Manager share operational dashboard access, while staff administration remains Admin-only.
+
+## Demo-data controls
+
+The `seed_demo_data` management command requires an explicit active organisation and an existing active Admin. It is transactional, idempotent, and covered by a two-tenant regression test proving that the non-target organisation remains unchanged. Demo member history does not expose internal seed metadata.

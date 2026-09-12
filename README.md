@@ -2,47 +2,47 @@
 
 KonnectCore is a multi-organisation SaaS platform for cooperatives, farmer organisations, associations, and similar member-based organisations.
 
-This repository currently contains **Stages 1–3**: authentication, private organisation workspaces, staff roles, controlled onboarding, tenant-isolation foundations, member management, and organisation structure.
+The validation MVP is complete. It provides private organisation workspaces, role-based staff access, operational records, reporting, a mobile Field Officer experience, and a separate KonnectCore Super Admin area.
 
-## Stage 1 features
+## Current MVP scope
 
-- Email/password authentication with no public registration
-- KonnectCore Super Admin organisation provisioning
-- Secure, expiring invitation for an organisation's first Admin
-- Organisation Admin creation and invitation of Managers and Field Officers
-- Private organisation workspace selection
-- Server-side role enforcement
-- Active/suspended/closed organisation status
-- Responsive desktop, tablet, and mobile interface
-- Automated authentication, permission, invitation, and cross-organisation isolation tests
+1. **Authentication and tenancy** — email login, private workspaces, controlled onboarding, roles, invitations, and organisation status controls.
+2. **Members** — profiles, search, status, private photos/documents, CSV/XLSX import, and member history.
+3. **Groups and structure** — Regions, Districts, Branches, Communities, Groups, leaders, responsible officers, and member assignments.
+4. **Farms and crops** — crop catalogue, farm size/location/GPS, planting periods, seasons, and estimated/actual yields.
+5. **Collections** — produce quantities, grades, prices, calculated values, photos, notes, and recorder attribution.
+6. **Finance** — member payments, dues, contributions, savings, expenses, methods, statuses, references, and outstanding values.
+7. **Field Workspace** — assigned-member search, registration, farm updates, field visits, GPS/photos, and produce entry.
+8. **Dashboard and reports** — organisation metrics, operational summaries, filters, and CSV/XLSX exports.
+9. **Platform administration** — owner-only organisation list, account details, counts, provisioning, and status management.
 
-## Stage 2 features
+## Roles and landing pages
 
-- Tenant-scoped member registration and editing
-- Name, phone, membership number, ID/reference, location, photo, and status
-- Search by member details and filter by status
-- Private member documents and photos served through authenticated tenant-checked routes
-- Atomic UTF-8 CSV and XLSX imports
-- Member create, update, document, and import history
-- Admin/Manager mutation access and Field Officer read-only access until assigned-member workflows are added in Stage 7
+| Account type | Landing page | Main access |
+| --- | --- | --- |
+| KonnectCore Super Admin | Platform Organisations | Provision and manage organisation accounts |
+| Organisation Admin | Organisation Dashboard | Full operational access and staff administration |
+| Manager | Organisation Dashboard | Operational management without staff administration |
+| Field Officer | Field Workspace | Assigned-member mobile workflows |
 
-## Stage 3 features
+There is no public registration. A KonnectCore Super Admin creates a workspace and issues its first Admin invitation. Organisation Admins can then create or invite Managers and Field Officers.
 
-- Flexible hierarchy of Regions, Districts, Branches, Communities, and Groups
-- Parent/child organisation structure such as Region → District → Group
-- Member assignment to structure units
-- Member leaders and responsible Field Officers
-- Search and filtering by unit type
-- Tenant-scoped crop catalogue, farm profiles, GPS coordinates, planting periods, and yield history
-- Tenant-scoped produce collections with quantities, grades, prices, automatic totals, photos, and member history
-- Hierarchy-cycle prevention and tenant-safe relationship validation
-- Admin/Manager structure management with read access for Field Officers
+## User interface
 
-Stage 4 farms and crops is complete. Stage 5 produce collections is complete. All nine validation MVP stages are complete.
+The interface uses a consistent green KonnectCore design system with:
+
+- Responsive authenticated application shell and sidebar navigation
+- Operational dashboard with compact metrics, tables, summaries, and empty states
+- Consistent typography, forms, buttons, filters, tables, and status badges
+- Responsive desktop, tablet, and mobile layouts
+- Simplified Field Officer navigation with large mobile actions
+- Polished login and platform-administration surfaces
+
+Django templates provide the interface; shared presentation rules live in `static/css/app.css`.
 
 ## Requirements
 
-### Docker (recommended)
+### Docker development (recommended)
 
 - Docker Desktop
 - Docker Compose
@@ -54,28 +54,30 @@ Stage 4 farms and crops is complete. Stage 5 produce collections is complete. Al
 
 ## Run with Docker
 
-1. Copy the environment template:
+```powershell
+Copy-Item .env.example .env
+```
 
-   ```powershell
-   Copy-Item .env.example .env
-   ```
+Set secure values for `DJANGO_SECRET_KEY` and `POSTGRES_PASSWORD` in `.env`, then run:
 
-2. Replace `DJANGO_SECRET_KEY` and `POSTGRES_PASSWORD` in `.env`.
-3. Build and start the application:
+```powershell
+docker compose up --build -d
+docker compose exec web python manage.py createsuperuser
+```
 
-   ```powershell
-   docker compose up --build
-   ```
+Open <http://localhost:8000/login/>.
 
-4. In another terminal, create the first KonnectCore Super Admin:
+The web service applies migrations before starting Django. PostgreSQL data is stored in the Docker volume `postgres_data`. Development uploads are stored under `media/` and excluded from Git.
 
-   ```powershell
-   docker compose exec web python manage.py createsuperuser
-   ```
+Useful commands:
 
-5. Open <http://localhost:8000/login/>.
+```powershell
+docker compose ps
+docker compose logs -f web
+docker compose down
+```
 
-The web container applies database migrations before starting Django. PostgreSQL data is stored in the Docker volume `postgres_data`. Uploaded files will use `media/` during development and are excluded from Git.
+Do not use `docker compose down -v` unless deleting the PostgreSQL volume is intentional.
 
 ## Run locally
 
@@ -86,7 +88,7 @@ pip install -r requirements.txt
 Copy-Item .env.example .env
 ```
 
-Set `POSTGRES_HOST=localhost` in `.env`, create the configured PostgreSQL database, then run:
+Set `POSTGRES_HOST=localhost`, create the configured PostgreSQL database, and run:
 
 ```powershell
 python manage.py migrate
@@ -94,7 +96,7 @@ python manage.py createsuperuser
 python manage.py runserver
 ```
 
-For a temporary SQLite development database only:
+SQLite is supported only as an explicit development/testing convenience:
 
 ```powershell
 $env:DB_ENGINE = "sqlite"
@@ -102,40 +104,68 @@ python manage.py migrate
 python manage.py runserver
 ```
 
-PostgreSQL remains the production and Docker database.
+## Demo data
 
-## Tests
-
-Fast local suite:
+Populate an existing active organisation with realistic, linked validation data:
 
 ```powershell
-$env:DB_ENGINE = "sqlite"
-python -m pytest
+docker compose exec web python manage.py seed_demo_data --organisation <organisation-slug>
 ```
 
-PostgreSQL/Docker suite:
+To assign a password only to newly created demo staff accounts:
 
 ```powershell
-docker compose run --rm web python -m pytest
+docker compose exec web python manage.py seed_demo_data `
+  --organisation <organisation-slug> `
+  --staff-password '<temporary-password>'
 ```
 
-## Main organisation
+The command is transactional, organisation-scoped, and idempotent. Re-running it does not duplicate its deterministic demo records. Never commit real or temporary passwords.
+
+The standard dataset includes 24 members, four groups, four crops, 24 farms/seasons, 34 collections, 31 financial records, 12 visits, and representative Admin/Manager/Field Officer memberships.
+
+See [`docs/demo-and-validation.md`](docs/demo-and-validation.md) for details.
+
+## Tests and verification
+
+Fast SQLite suite:
+
+```powershell
+docker compose exec -e DB_ENGINE=sqlite web python -m pytest -q
+```
+
+PostgreSQL suite:
+
+```powershell
+docker compose run --rm web python -m pytest -q
+```
+
+Additional checks:
+
+```powershell
+docker compose exec web python manage.py check
+docker compose exec web python manage.py makemigrations --check --dry-run
+```
+
+The current verified baseline contains 103 tests covering authentication, role routing, tenant isolation, permissions, imports, files, operational workflows, exports, dashboard behavior, platform administration, and demo-data idempotency.
+
+## Project organisation
 
 ```text
-apps/accounts/          Custom email-based user model
-apps/organisations/     Organisations, memberships, roles, invitations, tenant middleware
-apps/members/           Tenant-scoped members, files, imports, history, and workflows
-apps/groups/            Hierarchical structure, groups, leaders, officers, and assignments
-apps/farms/             Tenant-scoped crops, farms, GPS, seasons, and yields
-apps/collections/       Tenant-scoped produce collection records, values, and photos
-apps/finance/           Payments, dues, contributions, savings, and expenses
-apps/field/             Mobile assigned-member field workflows and visits
-apps/reports/           Dashboard, filtered reports, and CSV/XLSX exports
-apps/core/              Shared application foundation for later stages
-config/                 Django settings and URL configuration
-templates/              Responsive server-rendered interface
-static/                 Shared CSS and future static assets
-docs/                   Architecture and tenant-security notes
+apps/accounts/          Custom email-based user identity
+apps/organisations/     Workspaces, memberships, roles, invitations, middleware, onboarding
+apps/members/           Members, private files, imports, history
+apps/groups/            Hierarchy, groups, leaders, officers, assignments
+apps/farms/             Crops, farms, GPS, seasons, yields
+apps/collections/       Produce collection records and protected photos
+apps/finance/           Payments, dues, contributions, savings, expenses
+apps/field/             Assigned-member mobile workflows and visits
+apps/reports/           Dashboard, reports, filters, CSV/XLSX exports
+apps/core/              Shared foundation and demo-data command
+config/                 Settings, routes, WSGI, ASGI
+templates/              Server-rendered product interface
+static/css/app.css       Shared KonnectCore design system
+docs/                   Architecture, tenancy, and validation guidance
 ```
 
-See `docs/architecture.md` and `docs/tenancy-and-permissions.md` before extending the system.
+Read [`docs/architecture.md`](docs/architecture.md) and [`docs/tenancy-and-permissions.md`](docs/tenancy-and-permissions.md) before extending the system.
