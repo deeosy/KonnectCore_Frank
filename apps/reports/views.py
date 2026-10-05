@@ -1,4 +1,5 @@
 import csv
+from decimal import Decimal
 from io import BytesIO
 from django.db.models import Count,Sum
 from django.db.models.functions import Coalesce
@@ -13,6 +14,34 @@ from apps.groups.models import GroupMemberAssignment,StructureUnit
 from apps.members.models import Member, MemberHistory
 from apps.organisations.decorators import manager_or_admin_required,organisation_required
 from apps.organisations.scope import operational_staff_required
+
+OUTGOING_TYPES = {FinancialRecord.Type.MEMBER_PAYMENT, FinancialRecord.Type.EXPENSE}
+INCOMING_TYPES = {FinancialRecord.Type.DUE, FinancialRecord.Type.CONTRIBUTION, FinancialRecord.Type.SAVING}
+
+
+def direction_label(record):
+    """Outgoing: money the organisation pays. Incoming: money members pay the organisation."""
+    return "Outgoing" if record.record_type in OUTGOING_TYPES else "Incoming"
+
+
+def finance_totals(records):
+    """Dashboard finance figures, calculated from payment records only.
+
+    Paid figures use `paid_amount` (money actually moved). Owed figures use
+    `outstanding_amount` (amount minus paid; zero for cancelled records).
+    """
+    zero = Decimal("0.00")
+    totals = {"paid_to_members": zero, "owed_to_members": zero, "received_from_members": zero, "owed_by_members": zero, "expenses_paid": zero}
+    for row in records:
+        if row.record_type == FinancialRecord.Type.MEMBER_PAYMENT:
+            totals["paid_to_members"] += row.paid_amount
+            totals["owed_to_members"] += row.outstanding_amount
+        elif row.record_type == FinancialRecord.Type.EXPENSE:
+            totals["expenses_paid"] += row.paid_amount
+        elif row.record_type in INCOMING_TYPES:
+            totals["received_from_members"] += row.paid_amount
+            totals["owed_by_members"] += row.outstanding_amount
+    return totals
 
 def _filters(request, queryset, kind):
     member=request.GET.get("member","").strip();crop=request.GET.get("crop","").strip();group=request.GET.get("group","").strip();status=request.GET.get("status","").strip();start=request.GET.get("date_from","").strip();end=request.GET.get("date_to","").strip()
@@ -42,12 +71,9 @@ def dashboard(request):
     collections = CollectionRecord.objects.for_organisation(org).select_related("member", "crop", "recorded_by")
     finance = FinancialRecord.objects.for_organisation(org).select_related("member", "recorded_by")
     quantities = list(collections.values("quantity_unit").annotate(total=Sum("quantity")).order_by("quantity_unit"))
-    payment_rows = finance.exclude(record_type=FinancialRecord.Type.EXPENSE)
-    payments = sum((row.paid_amount for row in payment_rows), 0)
-    outstanding_rows = finance.filter(
-        record_type__in=[FinancialRecord.Type.MEMBER_PAYMENT, FinancialRecord.Type.DUE]
-    ).exclude(status=FinancialRecord.Status.CANCELLED)
-    outstanding = sum((row.outstanding_amount for row in outstanding_rows), 0)
+    # Money definitions (UAT I-6): `amount` is owed/scheduled, `paid_amount` is money actually paid.
+    # Outgoing = paid by the organisation; incoming = paid by members to the organisation.
+    totals = finance_totals(finance)
     groups = StructureUnit.objects.for_organisation(org).filter(
         unit_type=StructureUnit.Type.GROUP, is_active=True
     )
@@ -58,13 +84,12 @@ def dashboard(request):
         "farms": Farm.objects.for_organisation(org).count(),
         "collections": collections.count(),
         "quantities": quantities,
-        "payments": payments,
-        "outstanding": outstanding,
+        **totals,
     }
     return render(request, "reports/dashboard.html", {
         "metrics": metrics,
         "recent_collections": collections[:5],
-        "recent_payments": finance[:5],
+        "recent_payments": finance.filter(record_type=FinancialRecord.Type.MEMBER_PAYMENT)[:5],
         "group_summary": groups.annotate(total_members=Count("member_assignments")).order_by("-total_members", "name")[:6],
         "crop_totals": collections.values("crop__name", "crop__variety", "quantity_unit").annotate(total=Sum("quantity")).order_by("-total")[:6],
         "recent_activity": MemberHistory.objects.for_organisation(org).select_related("member", "actor")[:6],
@@ -87,7 +112,7 @@ def _rows(request,report):
         return ["Date","Member","Membership number","Crop","Quantity","Unit","Grade","Location","Price per unit","Total value"],([x.collection_date,x.member.full_name,x.member.membership_number,x.crop.display_name,x.quantity,x.get_quantity_unit_display(),x.quality_grade,x.collection_location,x.price_per_unit,x.total_value] for x in qs)
     if report=="finance":
         qs=_filters(request,FinancialRecord.objects.for_organisation(org).select_related("member"),"finance")
-        return ["Date","Type","Member","Amount","Paid","Outstanding","Method","Status","Reference"],([x.payment_date,x.get_record_type_display(),x.member.full_name if x.member else "Organisation",x.amount,x.paid_amount,x.outstanding_amount,x.get_payment_method_display(),x.get_status_display(),x.reference_number] for x in qs)
+        return ["Date","Type","Direction","Member","Amount","Paid","Outstanding","Method","Status","Reference"],([x.payment_date,x.get_record_type_display(),direction_label(x),x.member.full_name if x.member else "Organisation",x.amount,x.paid_amount,x.outstanding_amount,x.get_payment_method_display(),x.get_status_display(),x.reference_number] for x in qs)
     if report=="groups":
         qs=StructureUnit.objects.for_organisation(org).select_related("parent","leader","field_officer__user").annotate(total_members=Count("member_assignments"))
         return ["Name","Type","Parent","Leader","Field Officer","Members","Active"],([x.name,x.get_unit_type_display(),x.parent.name if x.parent else "",x.leader.full_name if x.leader else "",str(x.field_officer.user) if x.field_officer else "",x.total_members,"Yes" if x.is_active else "No"] for x in qs)
