@@ -18,9 +18,13 @@ class FieldVisit(OrganisationOwnedModel):
  photo=models.ImageField(upload_to=visit_photo_path,blank=True)
  recorded_by=models.ForeignKey(settings.AUTH_USER_MODEL,on_delete=models.PROTECT,related_name="field_visits_recorded")
  created_at=models.DateTimeField(auto_now_add=True)
+ # One-time form submission key (see apps/core/submissions.py); prevents duplicate records.
+ submission_key=models.UUIDField(null=True,blank=True,editable=False)
+ submission_fingerprint=models.CharField(max_length=64,blank=True,editable=False)
  class Meta:
   ordering=["-visit_date","-created_at"]
   indexes=[models.Index(fields=["organisation","member"]),models.Index(fields=["organisation","visit_date"])]
+  constraints=[models.UniqueConstraint(fields=["organisation","submission_key"],condition=models.Q(submission_key__isnull=False),name="unique_fieldvisit_submission_key")]
  def clean(self):
   e={}
   if self.member_id and self.member.organisation_id!=self.organisation_id:e["member"]="Member must belong to the same organisation."

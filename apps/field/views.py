@@ -13,6 +13,7 @@ from apps.members.views import save_member_form
 from apps.organisations.decorators import organisation_required
 from apps.organisations.models import OrganisationMembership
 from apps.organisations.scope import visible_members
+from apps.core.submissions import SubmissionConflict,save_once
 from .forms import FieldVisitForm
 
 def assigned_members(request):
@@ -46,7 +47,13 @@ def member_detail(request,member_id):
 @field_only
 def visit_add(request,member_id):
  member=get_object_or_404(assigned_members(request),pk=member_id);form=FieldVisitForm(request.POST or None,request.FILES or None,organisation=request.organisation,member=member,recorded_by=request.user)
- if request.method=='POST' and form.is_valid():form.save();messages.success(request,'Field visit saved.');return redirect('field_home')
+ if request.method=='POST' and form.is_valid():
+  try:
+   visit,created=save_once(form,organisation=request.organisation,actor=request.user)
+  except SubmissionConflict as exc:
+   form.add_error(None,str(exc))
+  else:
+   messages.success(request,'Field visit saved.' if created else 'This field visit was already saved.');return redirect('field_home')
  return render(request,'field/form.html',{'form':form,'title':f'Visit: {member.full_name}'})
 @field_only
 def farm_update(request,member_id):
@@ -56,5 +63,11 @@ def farm_update(request,member_id):
 @field_only
 def collection_add(request,member_id):
  member=get_object_or_404(assigned_members(request),pk=member_id);form=CollectionRecordForm(request.POST or None,request.FILES or None,organisation=request.organisation,recorded_by=request.user,initial={'member':member});form.fields['member'].disabled=True
- if request.method=='POST' and form.is_valid():form.save();messages.success(request,'Collection recorded.');return redirect('field_home')
+ if request.method=='POST' and form.is_valid():
+  try:
+   record,created=save_once(form,organisation=request.organisation,actor=request.user)
+  except SubmissionConflict as exc:
+   form.add_error(None,str(exc))
+  else:
+   messages.success(request,'Collection recorded.' if created else 'This collection was already saved.');return redirect('field_home')
  return render(request,'field/form.html',{'form':form,'title':f'Collection: {member.full_name}'})

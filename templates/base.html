@@ -52,5 +52,57 @@
 {% else %}
   <main class="public-shell"><a class="public-brand" href="/"><span class="brand-mark">K</span><strong>KonnectCore</strong></a>{% for message in messages %}<div class="message" role="status">{{ message }}</div>{% endfor %}{% block public_content %}{% block content_public %}{% endblock %}{% endblock %}</main>
 {% endif %}
+<script>
+/* Prevent double submission of POST forms (UAT I-2). Server-side submission keys remain the real guarantee. */
+(function () {
+  var BUSY = "data-submitting";
+  function buttons(form) {
+    return form.querySelectorAll('button[type="submit"], button:not([type]), input[type="submit"]');
+  }
+  function restore(form) {
+    form.removeAttribute(BUSY);
+    buttons(form).forEach(function (btn) {
+      if (btn.hasAttribute("data-original-label")) {
+        if (btn.tagName === "INPUT") { btn.value = btn.getAttribute("data-original-label"); }
+        else { btn.textContent = btn.getAttribute("data-original-label"); }
+        btn.removeAttribute("data-original-label");
+      }
+      btn.disabled = false;
+      btn.removeAttribute("aria-busy");
+    });
+  }
+  function restoreAll(root) {
+    (root || document).querySelectorAll("form[" + BUSY + "]").forEach(restore);
+  }
+  document.addEventListener("submit", function (event) {
+    var form = event.target;
+    if (!(form instanceof HTMLFormElement)) { return; }
+    if ((form.getAttribute("method") || "get").toLowerCase() !== "post") { return; }
+    if (form.hasAttribute(BUSY)) { event.preventDefault(); return; }
+    form.setAttribute(BUSY, "");
+    // Disable after the browser has built the form data, so the submitter's value is still sent.
+    window.setTimeout(function () {
+      if (!form.hasAttribute(BUSY)) { return; }
+      buttons(form).forEach(function (btn) {
+        var label = btn.tagName === "INPUT" ? btn.value : btn.textContent;
+        if (!btn.hasAttribute("data-original-label")) { btn.setAttribute("data-original-label", label); }
+        if (btn.textContent.trim() || btn.tagName === "INPUT") {
+          if (btn.tagName === "INPUT") { btn.value = "Saving…"; } else if (!btn.classList.contains("icon-button")) { btn.textContent = "Saving…"; }
+        }
+        btn.disabled = true;
+        btn.setAttribute("aria-busy", "true");
+      });
+    }, 0);
+  }, false);
+  // Back/forward navigation can restore a page from cache with buttons still disabled.
+  window.addEventListener("pageshow", function () { restoreAll(document); });
+  // HTMX partial updates: re-enable once the request finishes (success or error).
+  document.addEventListener("htmx:afterRequest", function (event) {
+    var form = event.target && event.target.closest ? event.target.closest("form") : null;
+    if (form) { restore(form); } else { restoreAll(document); }
+  });
+  document.addEventListener("htmx:afterSwap", function (event) { restoreAll(event.target); });
+})();
+</script>
 </body>
 </html>

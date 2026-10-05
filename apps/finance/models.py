@@ -36,12 +36,20 @@ class FinancialRecord(OrganisationOwnedModel):
     recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="financial_records_created")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    # One-time form submission key (see apps/core/submissions.py); prevents duplicate records.
+    submission_key = models.UUIDField(null=True, blank=True, editable=False)
+    submission_fingerprint = models.CharField(max_length=64, blank=True, editable=False)
     class Meta:
         ordering = ["-payment_date", "-created_at"]
         constraints = [
             models.CheckConstraint(condition=models.Q(amount__gt=0), name="finance_amount_positive"),
             models.CheckConstraint(condition=models.Q(paid_amount__gte=0), name="finance_paid_nonnegative"),
             models.CheckConstraint(condition=models.Q(paid_amount__lte=models.F("amount")), name="finance_paid_lte_amount"),
+            models.UniqueConstraint(
+                fields=["organisation", "submission_key"],
+                condition=models.Q(submission_key__isnull=False),
+                name="unique_finance_submission_key",
+            ),
         ]
         indexes = [models.Index(fields=["organisation", "payment_date"]), models.Index(fields=["organisation", "record_type"]), models.Index(fields=["organisation", "status"]), models.Index(fields=["organisation", "member"])]
     def clean(self):

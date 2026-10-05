@@ -40,6 +40,9 @@ class CollectionRecord(OrganisationOwnedModel):
     recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="collection_records_created")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    # One-time form submission key (see apps/core/submissions.py); prevents duplicate records.
+    submission_key = models.UUIDField(null=True, blank=True, editable=False)
+    submission_fingerprint = models.CharField(max_length=64, blank=True, editable=False)
 
     class Meta:
         ordering = ["-collection_date", "-created_at"]
@@ -47,6 +50,11 @@ class CollectionRecord(OrganisationOwnedModel):
             models.CheckConstraint(condition=models.Q(quantity__gt=0), name="collection_quantity_positive"),
             models.CheckConstraint(condition=models.Q(price_per_unit__gte=0), name="collection_price_nonnegative"),
             models.CheckConstraint(condition=models.Q(total_value__gte=0), name="collection_total_nonnegative"),
+            models.UniqueConstraint(
+                fields=["organisation", "submission_key"],
+                condition=models.Q(submission_key__isnull=False),
+                name="unique_collection_submission_key",
+            ),
         ]
         indexes = [
             models.Index(fields=["organisation", "collection_date"]),

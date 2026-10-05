@@ -3,6 +3,7 @@ from django.shortcuts import get_object_or_404,redirect,render
 from django.contrib import messages
 from apps.organisations.decorators import manager_or_admin_required,organisation_required
 from apps.organisations.scope import operational_staff_required
+from apps.core.submissions import SubmissionConflict, save_once
 from .forms import FinancialRecordForm
 from .models import FinancialRecord
 
@@ -22,7 +23,12 @@ def finance_detail(request,record_id):
 def finance_create(request):
     form=FinancialRecordForm(request.POST or None,organisation=request.organisation,recorded_by=request.user)
     if request.method=="POST" and form.is_valid():
-        item=form.save(); messages.success(request,"Financial record saved."); return redirect("finance_detail",record_id=item.pk)
+        try:
+            item,created=save_once(form,organisation=request.organisation,actor=request.user)
+        except SubmissionConflict as exc:
+            form.add_error(None,str(exc))
+        else:
+            messages.success(request,"Financial record saved." if created else "This financial record was already saved."); return redirect("finance_detail",record_id=item.pk)
     return render(request,"finance/form.html",{"form":form,"title":"Record payment, due or expense"})
 @manager_or_admin_required
 def finance_edit(request,record_id):

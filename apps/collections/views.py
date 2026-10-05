@@ -10,6 +10,8 @@ from apps.members.models import Member
 from apps.organisations.decorators import manager_or_admin_required, organisation_required
 from apps.organisations.scope import operational_staff_required, visible_member_ids
 
+from apps.core.submissions import SubmissionConflict, save_once
+
 from .forms import CollectionFilterForm, CollectionRecordForm
 from .models import CollectionRecord
 
@@ -95,9 +97,13 @@ def collection_create(request):
         initial=initial,
     )
     if request.method == "POST" and form.is_valid():
-        record = form.save()
-        messages.success(request, "Produce collection recorded.")
-        return redirect("collection_detail", record_id=record.pk)
+        try:
+            record, created = save_once(form, organisation=request.organisation, actor=request.user)
+        except SubmissionConflict as exc:
+            form.add_error(None, str(exc))
+        else:
+            messages.success(request, "Produce collection recorded." if created else "This collection was already saved.")
+            return redirect("collection_detail", record_id=record.pk)
     return render(request, "collections/collection_form.html", {
         "form": form,
         "title": "Record produce collection",

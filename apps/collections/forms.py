@@ -4,6 +4,8 @@ from django.db.models import Q
 from apps.farms.models import Crop
 from apps.members.models import Member
 
+from apps.core.submissions import add_submission_key
+
 from .models import CollectionRecord
 
 MAX_IMAGE_BYTES = 5 * 1024 * 1024
@@ -54,6 +56,7 @@ class CollectionRecordForm(forms.ModelForm):
                 Q(is_active=True) | Q(pk=self.instance.crop_id)
             )
         self.fields["crop"].queryset = crops
+        add_submission_key(self)
 
     def save(self, commit=True):
         record = super().save(commit=False)

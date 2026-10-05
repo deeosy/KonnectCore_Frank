@@ -1,5 +1,6 @@
 from django import forms
 from apps.members.models import Member
+from apps.core.submissions import add_submission_key
 from .models import FinancialRecord
 
 class FinancialRecordForm(forms.ModelForm):
@@ -13,6 +14,7 @@ class FinancialRecordForm(forms.ModelForm):
         self.instance.organisation=organisation
         if self.instance._state.adding: self.instance.recorded_by=recorded_by
         self.fields["member"].queryset=Member.objects.for_organisation(organisation)
+        add_submission_key(self)
     def save(self,commit=True):
         item=super().save(commit=False); item.organisation=self.organisation
         if item._state.adding: item.recorded_by=self.recorded_by
