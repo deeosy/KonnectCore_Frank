@@ -56,12 +56,29 @@ class Member(OrganisationOwnedModel):
             models.Index(fields=["organisation", "last_name", "first_name"]),
         ]
 
-    def clean(self):
-        self.membership_number = self.membership_number.strip()
-        self.phone = self.phone.strip()
-        self.id_reference = self.id_reference.strip()
-        if not self.membership_number:
-            raise ValidationError({"membership_number": "Membership number is required."})
+    TRIMMED_FIELDS = ("membership_number", "phone", "id_reference")
+
+    def clean_fields(self, exclude=None):
+        """Trim text fields and require a membership number.
+
+        Runs per field so that fields a form has already rejected (and
+        therefore excluded) are not re-validated. Otherwise a rejected
+        duplicate number would also be reported as missing.
+        """
+        exclude = set(exclude or ())
+        for name in self.TRIMMED_FIELDS:
+            if name not in exclude:
+                setattr(self, name, (getattr(self, name) or "").strip())
+        errors = {}
+        if "membership_number" not in exclude and not self.membership_number:
+            errors["membership_number"] = ["Membership number is required."]
+            exclude.add("membership_number")
+        try:
+            super().clean_fields(exclude=exclude)
+        except ValidationError as exc:
+            errors = exc.update_error_dict(errors)
+        if errors:
+            raise ValidationError(errors)
 
     @property
     def full_name(self):

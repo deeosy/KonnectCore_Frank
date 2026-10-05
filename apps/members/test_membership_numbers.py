@@ -16,12 +16,15 @@ from .services import import_members
 from .tests import MemberFixture
 
 DUPLICATE_MESSAGE = "already exists in this organisation"
+REQUIRED_MESSAGE = "Membership number is required."
 
 
 class MemberFormDuplicateTests(MemberFixture):
     def assert_rejected(self, response, before):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, DUPLICATE_MESSAGE)
+        # A filled-in duplicate must not also be reported as missing.
+        self.assertNotContains(response, REQUIRED_MESSAGE)
         self.assertEqual(Member.objects.count(), before)
 
     def test_create_exact_duplicate_shows_field_error_and_keeps_input(self):
@@ -49,6 +52,7 @@ class MemberFormDuplicateTests(MemberFixture):
         response = self.client.post(reverse("member_edit", args=[other.pk]), self.member_payload("a-001"))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, DUPLICATE_MESSAGE)
+        self.assertNotContains(response, REQUIRED_MESSAGE)
         other.refresh_from_db()
         self.assertEqual(other.membership_number, "A-009")
 
@@ -70,6 +74,23 @@ class MemberFormDuplicateTests(MemberFixture):
         before = Member.objects.count()
         response = self.client.post(reverse("field_member_create"), self.member_payload("A-001"))
         self.assert_rejected(response, before)
+
+    def test_blank_number_still_reports_required(self):
+        self.login_as(self.alpha_admin, self.alpha)
+        before = Member.objects.count()
+        response = self.client.post(reverse("member_create"), self.member_payload("   "))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Member.objects.count(), before)
+        self.assertTrue(response.context["form"].errors.get("membership_number"))
+
+    def test_model_full_clean_still_requires_number(self):
+        member = Member(
+            organisation=self.alpha, first_name="Blank", last_name="Number",
+            membership_number="   ", created_by=self.alpha_admin, updated_by=self.alpha_admin,
+        )
+        with self.assertRaises(ValidationError) as ctx:
+            member.full_clean()
+        self.assertIn("membership_number", ctx.exception.message_dict)
 
 
 class MemberImportDuplicateTests(MemberFixture):
