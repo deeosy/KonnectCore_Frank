@@ -12,6 +12,7 @@ from apps.finance.models import FinancialRecord
 from apps.farms.models import Crop, Farm
 from apps.groups.models import GroupMemberAssignment,StructureUnit
 from apps.members.models import Member, MemberHistory
+from apps.field.models import FieldVisit
 from apps.organisations.decorators import manager_or_admin_required,organisation_required
 from apps.organisations.scope import operational_staff_required
 
@@ -93,6 +94,9 @@ def dashboard(request):
         "group_summary": groups.annotate(total_members=Count("member_assignments")).order_by("-total_members", "name")[:6],
         "crop_totals": collections.values("crop__name", "crop__variety", "quantity_unit").annotate(total=Sum("quantity")).order_by("-total")[:6],
         "recent_activity": MemberHistory.objects.for_organisation(org).select_related("member", "actor")[:6],
+        "recent_field_visits": FieldVisit.objects.for_organisation(org).select_related("member", "recorded_by")[:5],
+        "awaiting_assignment": members.exclude(group_assignments__unit__is_active=True).order_by("-created_at")[:10],
+        "awaiting_assignment_count": members.exclude(group_assignments__unit__is_active=True).count(),
     })
 @operational_staff_required
 def reports_home(request):

@@ -2,6 +2,9 @@ from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q
 from django.shortcuts import get_object_or_404,redirect,render
+import mimetypes
+from django.http import FileResponse,Http404
+from .models import FieldVisit
 from apps.collections.forms import CollectionRecordForm
 from apps.farms.forms import FarmForm
 from apps.farms.models import Farm
@@ -30,14 +33,18 @@ def field_only(view):
 def home(request):
  qs=assigned_members(request);q=request.GET.get('q','').strip()
  if q:qs=qs.filter(Q(first_name__icontains=q)|Q(last_name__icontains=q)|Q(membership_number__icontains=q)|Q(phone__icontains=q))
- return render(request,'field/home.html',{'members':qs,'query':q})
+ recent_visits=FieldVisit.objects.none()
+ if request.organisation_membership.role==OrganisationMembership.Role.FIELD_OFFICER:
+  # Only visits this officer recorded, for members still within their scope.
+  recent_visits=FieldVisit.objects.for_organisation(request.organisation).filter(recorded_by=request.user,member_id__in=visible_members(request).values('pk')).select_related('member')[:5]
+ return render(request,'field/home.html',{'members':qs,'query':q,'recent_visits':recent_visits})
 @field_only
 def register_member(request):
  form=MemberForm(request.POST or None,request.FILES or None,organisation=request.organisation)
  if request.method=='POST' and form.is_valid():
   x=save_member_form(form,organisation=request.organisation,actor=request.user,creating=True)
   if x is not None:
-   record_history(x,MemberHistory.Action.CREATED,request.user,{"member":member_snapshot(x)});messages.success(request,'Member registered. Ask a Manager to assign the member to your group.');return redirect('field_home')
+   record_history(x,MemberHistory.Action.CREATED,request.user,{"member":member_snapshot(x)});messages.success(request,f'{x.full_name} is registered and awaiting assignment. The member will appear in your list once an Admin or Manager adds them to one of your groups.');return redirect('field_home')
  return render(request,'field/form.html',{'form':form,'title':'Register member'})
 @field_only
 def member_detail(request,member_id):
@@ -71,3 +78,10 @@ def collection_add(request,member_id):
   else:
    messages.success(request,'Collection recorded.' if created else 'This collection was already saved.');return redirect('field_home')
  return render(request,'field/form.html',{'form':form,'title':f'Collection: {member.full_name}'})
+@organisation_required
+def visit_photo(request,visit_id):
+ """Serve a field visit photo only for members the user may see (404 otherwise, including other organisations)."""
+ visit=get_object_or_404(FieldVisit.objects.for_organisation(request.organisation).filter(member_id__in=visible_members(request).values('pk')),pk=visit_id)
+ if not visit.photo:raise Http404('Visit has no photo.')
+ content_type=mimetypes.guess_type(visit.photo.name)[0] or 'application/octet-stream'
+ return FileResponse(visit.photo.open('rb'),content_type=content_type)

@@ -68,7 +68,7 @@ def member_list(request):
 @operational_staff_required
 def member_detail(request, member_id):
     member = get_object_or_404(
-        Member.objects.for_organisation(request.organisation).prefetch_related("documents", "history__actor", "farms__crop_seasons__crop", "collection_records__crop", "collection_records__recorded_by", "financial_records__recorded_by"),
+        Member.objects.for_organisation(request.organisation).prefetch_related("documents", "history__actor", "farms__crop_seasons__crop", "collection_records__crop", "collection_records__recorded_by", "financial_records__recorded_by", "field_visits__recorded_by"),
         pk=member_id,
     )
     return render(request, "members/member_detail.html", {"member": member})
