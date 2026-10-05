@@ -104,12 +104,16 @@ class MemberIsolationTests(MemberFixture):
 
 
 class MemberRoleTests(MemberFixture):
-    def test_all_roles_can_view_members(self):
-        for user in (self.alpha_admin, self.alpha_manager, self.alpha_field):
+    def test_operational_roles_view_members_and_field_officer_is_redirected(self):
+        for user in (self.alpha_admin, self.alpha_manager):
             self.client.logout()
             self.login_as(user, self.alpha)
             self.assertEqual(self.client.get(reverse("member_list")).status_code, 200)
             self.assertEqual(self.client.get(reverse("member_detail", args=[self.alpha_member.pk])).status_code, 200)
+        self.client.logout()
+        self.login_as(self.alpha_field, self.alpha)
+        for url in (reverse("member_list"), reverse("member_detail", args=[self.alpha_member.pk])):
+            self.assertRedirects(self.client.get(url), reverse("field_home"), fetch_redirect_response=False)
 
     def test_field_officer_cannot_mutate_or_import_in_stage_two(self):
         self.login_as(self.alpha_field, self.alpha)

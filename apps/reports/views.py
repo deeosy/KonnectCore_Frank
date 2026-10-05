@@ -12,6 +12,7 @@ from apps.farms.models import Crop, Farm
 from apps.groups.models import GroupMemberAssignment,StructureUnit
 from apps.members.models import Member, MemberHistory
 from apps.organisations.decorators import manager_or_admin_required,organisation_required
+from apps.organisations.scope import operational_staff_required
 
 def _filters(request, queryset, kind):
     member=request.GET.get("member","").strip();crop=request.GET.get("crop","").strip();group=request.GET.get("group","").strip();status=request.GET.get("status","").strip();start=request.GET.get("date_from","").strip();end=request.GET.get("date_to","").strip()
@@ -68,7 +69,7 @@ def dashboard(request):
         "crop_totals": collections.values("crop__name", "crop__variety", "quantity_unit").annotate(total=Sum("quantity")).order_by("-total")[:6],
         "recent_activity": MemberHistory.objects.for_organisation(org).select_related("member", "actor")[:6],
     })
-@organisation_required
+@operational_staff_required
 def reports_home(request):
     org=request.organisation
     collections=_filters(request,CollectionRecord.objects.for_organisation(org).select_related("member","crop"),"collections")

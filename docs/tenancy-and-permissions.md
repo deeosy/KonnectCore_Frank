@@ -31,9 +31,11 @@ Always:
 
 Stage 1 enforces that only organisation Admins can list, create, or invite staff. Managers and Field Officers receive HTTP 403 for those operations. Organisation users cannot access platform administration.
 
-Stage 2 allows all active staff roles to view tenant-scoped member lists and profiles. Admins and Managers can register/edit members, attach documents, and import records. Field Officers use the assigned-member Field Workspace implemented in Stage 7; broad member-management mutations remain restricted. Member detail, edit, file, search, and import operations are all derived from `request.organisation`; cross-tenant UUID guessing returns 404.
+Stage 2 member access is role-scoped. Admins and Managers can view all tenant-scoped member lists and profiles, register/edit members, attach documents, and import records. Field Officers cannot open the organisation-wide member list or profile; those routes redirect them to the Field Workspace. Field Officers see only their assigned members (see Stage 7 and *Field Officer record scope*). Member detail, edit, file, search, and import operations are all derived from `request.organisation`; cross-tenant UUID guessing returns 404.
 
-Stage 3 applies the same policy to organisation structure. All active roles can view units and assignments; Admins and Managers can create/edit units and add/remove members. Parent units, leaders, responsible Field Officers, and assigned members must all belong to the active organisation. Responsible officers must be active Field Officer memberships. Hierarchy cycles and duplicate sibling/root names are rejected.
+> **Policy change (pilot readiness).** Earlier versions of this document allowed all active staff roles, including Field Officers, to view every member list and profile in the organisation. Field Officer reads across the organisation therefore matched the documented policy at that time. Restricting Field Officers to their assigned members is an intentional, approved policy change, not a correction of undocumented behaviour.
+
+Stage 3 structure access: Admins and Managers can view units and assignments, create/edit units, and add/remove members. Field Officers are redirected from the organisation-wide structure list and detail pages to the Field Workspace. Parent units, leaders, responsible Field Officers, and assigned members must all belong to the active organisation. Responsible officers must be active Field Officer memberships. Hierarchy cycles and duplicate sibling/root names are rejected.
 
 ## Account status
 
@@ -60,7 +62,7 @@ Invitations are scoped to one organisation, email, and role. Raw tokens are neve
 - Farm, crop, and season detail/edit routes use tenant-scoped querysets; foreign UUIDs return HTTP 404.
 - Farm-to-member, season-to-farm, and season-to-crop ownership is validated at model level.
 - Search and crop filters begin with an organisation-scoped farm queryset. Unknown, malformed, or foreign crop filters are ignored and never broaden access beyond that queryset.
-- Admins and Managers may mutate farm and crop records. Field Officers are read-only in Stage 4.
+- Admins and Managers may view and mutate farm and crop records. Field Officers are redirected from the organisation-wide farm list, farm detail, and crop list, and update farms only for assigned members through the Field Workspace (Stage 7).
 - Member profiles prefetch and show only farms reachable from the already tenant-scoped member record.
 
 Any later collection or field-work feature must obtain farm and crop references from active-organisation querysets and must not accept an unscoped foreign key from request data.
@@ -73,16 +75,26 @@ Any later collection or field-work feature must obtain farm and crop references 
 - Quantity must be positive, price must be nonnegative, and total value is calculated server-side with decimal rounding. Database constraints reinforce these numeric invariants.
 - The original `recorded_by` user is assigned by the server and is not editable through request data.
 - Unknown, malformed, or foreign member/crop/date filters never broaden the base organisation-scoped queryset.
-- Admins and Managers may mutate collection records. Field Officers are read-only in Stage 5; assigned-member collection entry belongs to Stage 7.
+- Admins and Managers may view and mutate collection records. Field Officers are redirected from the organisation-wide collection list and detail pages, and record collections only for assigned members through the Field Workspace (Stage 7). Collection photos are served to Field Officers only for their assigned members; other photos return 404.
 
 Future finance, field, dashboard, and export code must resolve collection records from the active organisation and must never trust an organisation, member, crop, or recorder identifier supplied by the client without tenant-scoped validation.
 ## Stage 6 finance controls
 
-Financial records, member choices, lookups, filters, and member-profile history are organisation-scoped. Cross-tenant UUIDs return 404 or fail form/model validation. The recorder is server-controlled. Admins and Managers mutate; Field Officers are read-only.
+Financial records, member choices, lookups, filters, and member-profile history are organisation-scoped. Cross-tenant UUIDs return 404 or fail form/model validation. The recorder is server-controlled. Admins and Managers view and mutate. Field Officers are redirected from finance pages to the Field Workspace; fieldwork does not require financial records.
 
 ## Stage 7 field controls
 
-Field Officer access is the intersection of active organisation membership and members assigned to active structure units for which that exact membership is responsible. All visit, farm, and collection actions resolve the member from this scoped queryset. Cross-tenant and unassigned members return 404.
+Field Officer access is the intersection of active organisation membership and members assigned to active structure units for which that exact membership is responsible. All visit, farm, and collection actions, and the read-only field member page (`/field/members/<id>/`), resolve the member from this scoped queryset. Cross-tenant and unassigned members return 404. Admins and Managers receive 403 on Field Officer-only actions.
+
+### Field Officer record scope
+
+`apps/organisations/scope.py` is the single owner of role-based record scope:
+
+- `visible_members(request)`: Admins and Managers see all members of the active organisation; Field Officers see only members in active units they are responsible for.
+- `operational_staff_required`: guards organisation-wide pages (members, groups, farms, crops, collections, finance, reports). Field Officers are redirected to the Field Workspace.
+- Member photos, member document downloads, and collection photos filter by `visible_members`, so direct file URLs for out-of-scope members return 404.
+
+New views that show member-related data must use these helpers rather than reimplementing the rule.
 
 ## Stage 8 reporting controls
 

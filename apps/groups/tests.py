@@ -167,12 +167,16 @@ class HierarchyValidationTests(StructureFixture):
 
 
 class StructureRoleTests(StructureFixture):
-    def test_all_roles_can_view_structure(self):
-        for user in (self.alpha_admin, self.alpha_manager, self.alpha_field_user):
+    def test_operational_roles_view_structure_and_field_officer_is_redirected(self):
+        for user in (self.alpha_admin, self.alpha_manager):
             self.client.logout()
             self.login_as(user, self.alpha)
             self.assertEqual(self.client.get(reverse("structure_list")).status_code, 200)
             self.assertEqual(self.client.get(reverse("structure_detail", args=[self.alpha_group.pk])).status_code, 200)
+        self.client.logout()
+        self.login_as(self.alpha_field_user, self.alpha)
+        for url in (reverse("structure_list"), reverse("structure_detail", args=[self.alpha_group.pk])):
+            self.assertRedirects(self.client.get(url), reverse("field_home"), fetch_redirect_response=False)
 
     def test_field_officer_cannot_mutate_structure(self):
         self.login_as(self.alpha_field_user, self.alpha)

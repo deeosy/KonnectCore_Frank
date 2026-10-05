@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}{{ member.full_name }} · Field Workspace · KonnectCore{% endblock %}
+{% block header_title %}Field Workspace{% endblock %}
+{% block content %}
+<div class="field-shell">
+  <div class="page-head">
+    <div>
+      <p class="eyebrow">Assigned member</p>
+      <h1>{{ member.full_name }}</h1>
+      <p class="muted">{{ member.membership_number }} · {{ member.phone|default:"No phone" }}{% if member.location %} · {{ member.location }}{% endif %}</p>
+    </div>
+    <span class="status status-{{ member.status }}">{{ member.get_status_display }}</span>
+  </div>
+
+  <div class="field-actions">
+    <a class="button secondary" href="{% url 'field_visit_add' member.id %}">Record visit</a>
+    <a class="button secondary" href="{% url 'field_farm_update' member.id %}">Update farm</a>
+    <a class="button" href="{% url 'field_collection_add' member.id %}">Add collection</a>
+  </div>
+
+  <section class="card">
+    <h2>Farm</h2>
+    {% for farm in member.farms.all %}
+      <p><strong>{{ farm.name }}</strong>{% if farm.location %} · {{ farm.location }}{% endif %}</p>
+      {% with seasons=farm.crop_seasons.all %}
+        {% if seasons %}<p class="muted small">Crops: {% for season in seasons %}{{ season.crop.display_name }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>{% endif %}
+      {% endwith %}
+    {% empty %}
+      <p class="muted">No farm recorded yet. Use <strong>Update farm</strong> to add it.</p>
+    {% endfor %}
+  </section>
+
+  <section class="card">
+    <h2>Field visits</h2>
+    {% for visit in member.field_visits.all %}
+      <article class="field-visit">
+        <p><strong>{{ visit.visit_date }}</strong> · recorded by {{ visit.recorded_by.get_full_name|default:visit.recorded_by.email }}</p>
+        <p>{{ visit.notes|linebreaksbr }}</p>
+        {% if visit.latitude is not None %}<p class="muted small">GPS: {{ visit.latitude }}, {{ visit.longitude }}</p>{% endif %}
+        {% if visit.photo %}<p class="muted small">Photo attached</p>{% endif %}
+      </article>
+    {% empty %}
+      <p class="muted">No visits recorded yet.</p>
+    {% endfor %}
+  </section>
+
+  <section class="card">
+    <h2>Collections</h2>
+    {% for record in member.collection_records.all %}
+      <p>{{ record.collection_date }} · {{ record.crop.display_name }} · {{ record.quantity }} {{ record.get_quantity_unit_display }} · {{ record.total_value }}</p>
+    {% empty %}
+      <p class="muted">No collections recorded yet.</p>
+    {% endfor %}
+  </section>
+
+  <p><a href="{% url 'field_home' %}">← Back to my assigned members</a></p>
+</div>
+{% endblock %}

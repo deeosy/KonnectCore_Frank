@@ -27,3 +27,15 @@ class FieldTests(TestCase):
   self.login(self.admin);self.assertEqual(self.client.get(reverse('field_home')).status_code,200);self.assertEqual(self.client.get(reverse('field_member_create')).status_code,403)
  def test_cross_tenant_visit_rejected(self):
   self.login(self.f);self.assertEqual(self.client.get(reverse('field_visit_add',args=[self.mb.pk])).status_code,404)
+ def test_field_member_page_shows_assigned_member(self):
+  self.login(self.f);r=self.client.get(reverse('field_member_detail',args=[self.m.pk]));self.assertEqual(r.status_code,200);self.assertContains(r,'Ama One');self.assertContains(r,'No visits recorded yet.')
+ def test_field_member_page_hides_unassigned_and_foreign_members(self):
+  self.login(self.f)
+  for member in (self.un,self.mb):self.assertEqual(self.client.get(reverse('field_member_detail',args=[member.pk])).status_code,404)
+ def test_other_officer_cannot_open_member_assigned_elsewhere(self):
+  self.login(self.f2);self.assertEqual(self.client.get(reverse('field_member_detail',args=[self.m.pk])).status_code,404);self.assertNotContains(self.client.get(reverse('field_home')),'Ama One')
+ def test_admin_cannot_use_field_member_page(self):
+  self.login(self.admin);self.assertEqual(self.client.get(reverse('field_member_detail',args=[self.m.pk])).status_code,403)
+ def test_field_officer_redirected_from_organisation_member_profile(self):
+  self.login(self.f)
+  for member in (self.m,self.un):self.assertRedirects(self.client.get(reverse('member_detail',args=[member.pk])),reverse('field_home'),fetch_redirect_response=False)

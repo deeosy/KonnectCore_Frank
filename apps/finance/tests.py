@@ -25,7 +25,7 @@ class FinanceTests(TestCase):
  def test_isolation_and_roles(self):
   foreign=FinancialRecord.objects.create(organisation=self.b,record_type="due",member=self.mb,amount=10,paid_amount=0,payment_method="cash",status="pending",payment_date=date.today(),recorded_by=self.other)
   self.login(self.admin);self.assertNotContains(self.client.get(reverse("finance_list")),"Ben B");self.assertEqual(self.client.get(reverse("finance_detail",args=[foreign.pk])).status_code,404)
-  self.client.logout();self.login(self.field);self.assertEqual(self.client.get(reverse("finance_list")).status_code,200);self.assertEqual(self.client.get(reverse("finance_create")).status_code,403)
+  self.client.logout();self.login(self.field);self.assertRedirects(self.client.get(reverse("finance_list")),reverse("field_home"),fetch_redirect_response=False);self.assertEqual(self.client.get(reverse("finance_create")).status_code,403)
  def test_create_and_member_history(self):
   self.login(self.admin);r=self.client.post(reverse("finance_create"),self.data());obj=FinancialRecord.objects.exclude(pk=self.item.pk).get();self.assertRedirects(r,reverse("finance_detail",args=[obj.pk]));self.assertEqual(obj.recorded_by,self.admin);self.assertEqual(obj.outstanding_amount,Decimal("0.00"));self.assertContains(self.client.get(reverse("member_detail",args=[self.ma.pk])),"Payments and dues history")
  def test_tenant_choices_and_validation(self):

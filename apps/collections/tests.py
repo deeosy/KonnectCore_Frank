@@ -187,12 +187,16 @@ class CollectionWorkflowTests(CollectionFixture):
 
 
 class CollectionPermissionAndFilterTests(CollectionFixture):
-    def test_all_roles_can_view_but_field_officer_cannot_mutate(self):
-        for user in (self.admin, self.manager, self.field):
+    def test_operational_roles_view_and_field_officer_is_redirected_and_cannot_mutate(self):
+        for user in (self.admin, self.manager):
             self.client.logout()
             self.login_as(user)
             self.assertEqual(self.client.get(reverse("collection_list")).status_code, 200)
             self.assertEqual(self.client.get(reverse("collection_detail", args=[self.alpha_record.pk])).status_code, 200)
+        self.client.logout()
+        self.login_as(self.field)
+        for url in (reverse("collection_list"), reverse("collection_detail", args=[self.alpha_record.pk])):
+            self.assertRedirects(self.client.get(url), reverse("field_home"), fetch_redirect_response=False)
         self.assertEqual(self.client.get(reverse("collection_create")).status_code, 403)
         self.assertEqual(self.client.get(reverse("collection_edit", args=[self.alpha_record.pk])).status_code, 403)
 

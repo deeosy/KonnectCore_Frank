@@ -12,6 +12,7 @@ from apps.members.services import member_snapshot,record_history
 from apps.members.views import save_member_form
 from apps.organisations.decorators import organisation_required
 from apps.organisations.models import OrganisationMembership
+from apps.organisations.scope import visible_members
 from .forms import FieldVisitForm
 
 def assigned_members(request):
@@ -37,6 +38,11 @@ def register_member(request):
   if x is not None:
    record_history(x,MemberHistory.Action.CREATED,request.user,{"member":member_snapshot(x)});messages.success(request,'Member registered. Ask a Manager to assign the member to your group.');return redirect('field_home')
  return render(request,'field/form.html',{'form':form,'title':'Register member'})
+@field_only
+def member_detail(request,member_id):
+ """Read-only member page limited to the officer's assigned members (404 otherwise)."""
+ member=get_object_or_404(visible_members(request).prefetch_related("farms__crop_seasons__crop","collection_records__crop","collection_records__recorded_by","field_visits__recorded_by"),pk=member_id)
+ return render(request,'field/member_detail.html',{'member':member})
 @field_only
 def visit_add(request,member_id):
  member=get_object_or_404(assigned_members(request),pk=member_id);form=FieldVisitForm(request.POST or None,request.FILES or None,organisation=request.organisation,member=member,recorded_by=request.user)

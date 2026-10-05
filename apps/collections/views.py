@@ -8,6 +8,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from apps.farms.models import Crop
 from apps.members.models import Member
 from apps.organisations.decorators import manager_or_admin_required, organisation_required
+from apps.organisations.scope import operational_staff_required, visible_member_ids
 
 from .forms import CollectionFilterForm, CollectionRecordForm
 from .models import CollectionRecord
@@ -20,7 +21,7 @@ def _matching_pk(queryset, value):
     return next((str(item.pk) for item in queryset if str(item.pk) == value), "")
 
 
-@organisation_required
+@operational_staff_required
 def collection_list(request):
     records = CollectionRecord.objects.for_organisation(request.organisation).select_related(
         "member", "crop", "recorded_by"
@@ -66,7 +67,7 @@ def collection_list(request):
     })
 
 
-@organisation_required
+@operational_staff_required
 def collection_detail(request, record_id):
     record = get_object_or_404(
         CollectionRecord.objects.for_organisation(request.organisation).select_related(
@@ -130,7 +131,9 @@ def collection_edit(request, record_id):
 @organisation_required
 def collection_photo(request, record_id):
     record = get_object_or_404(
-        CollectionRecord.objects.for_organisation(request.organisation),
+        CollectionRecord.objects.for_organisation(request.organisation).filter(
+            member_id__in=visible_member_ids(request)
+        ),
         pk=record_id,
     )
     if not record.photo:

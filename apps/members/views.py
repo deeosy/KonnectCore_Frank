@@ -8,6 +8,7 @@ from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 
 from apps.organisations.decorators import manager_or_admin_required, organisation_required
+from apps.organisations.scope import operational_staff_required, visible_member_ids, visible_members
 
 from .forms import MemberDocumentForm, MemberForm, MemberImportForm
 from .models import Member, MemberDocument, MemberHistory
@@ -40,7 +41,7 @@ def save_member_form(form, *, organisation, actor, creating):
     return member
 
 
-@organisation_required
+@operational_staff_required
 def member_list(request):
     members = Member.objects.for_organisation(request.organisation)
     query = request.GET.get("q", "").strip()
@@ -64,7 +65,7 @@ def member_list(request):
     })
 
 
-@organisation_required
+@operational_staff_required
 def member_detail(request, member_id):
     member = get_object_or_404(
         Member.objects.for_organisation(request.organisation).prefetch_related("documents", "history__actor", "farms__crop_seasons__crop", "collection_records__crop", "collection_records__recorded_by", "financial_records__recorded_by"),
@@ -120,7 +121,7 @@ def member_document_add(request, member_id):
 
 @organisation_required
 def member_photo(request, member_id):
-    member = get_object_or_404(Member.objects.for_organisation(request.organisation), pk=member_id)
+    member = get_object_or_404(visible_members(request), pk=member_id)
     if not member.photo:
         raise Http404("Member has no photo.")
     return FileResponse(member.photo.open("rb"), content_type="image/*")
@@ -129,7 +130,9 @@ def member_photo(request, member_id):
 @organisation_required
 def member_document_download(request, document_id):
     document = get_object_or_404(
-        MemberDocument.objects.for_organisation(request.organisation).select_related("member"),
+        MemberDocument.objects.for_organisation(request.organisation)
+        .filter(member_id__in=visible_member_ids(request))
+        .select_related("member"),
         pk=document_id,
         member__organisation=request.organisation,
     )

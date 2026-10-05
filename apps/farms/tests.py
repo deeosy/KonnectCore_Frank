@@ -134,13 +134,17 @@ class FarmValidationTests(FarmFixture):
 
 
 class FarmRoleAndWorkflowTests(FarmFixture):
-    def test_all_roles_can_view_but_field_officer_cannot_mutate(self):
-        for user in (self.admin, self.manager, self.field):
+    def test_operational_roles_view_and_field_officer_is_redirected_and_cannot_mutate(self):
+        for user in (self.admin, self.manager):
             self.client.logout()
             self.login_as(user)
             self.assertEqual(self.client.get(reverse("farm_list")).status_code, 200)
             self.assertEqual(self.client.get(reverse("farm_detail", args=[self.alpha_farm.pk])).status_code, 200)
             self.assertEqual(self.client.get(reverse("crop_list")).status_code, 200)
+        self.client.logout()
+        self.login_as(self.field)
+        for url in (reverse("farm_list"), reverse("farm_detail", args=[self.alpha_farm.pk]), reverse("crop_list")):
+            self.assertRedirects(self.client.get(url), reverse("field_home"), fetch_redirect_response=False)
         for url in (reverse("farm_create"), reverse("farm_edit", args=[self.alpha_farm.pk]), reverse("crop_create"), reverse("season_create", args=[self.alpha_farm.pk])):
             self.assertEqual(self.client.get(url).status_code, 403)
 

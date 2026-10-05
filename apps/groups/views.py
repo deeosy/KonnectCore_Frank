@@ -4,12 +4,13 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from apps.organisations.decorators import manager_or_admin_required, organisation_required
+from apps.organisations.scope import operational_staff_required
 
 from .forms import GroupMemberAssignmentForm, StructureUnitForm
 from .models import GroupMemberAssignment, StructureUnit
 
 
-@organisation_required
+@operational_staff_required
 def structure_list(request):
     units = StructureUnit.objects.for_organisation(request.organisation).select_related(
         "parent", "leader", "field_officer__user"
@@ -33,7 +34,7 @@ def structure_list(request):
     })
 
 
-@organisation_required
+@operational_staff_required
 def structure_detail(request, unit_id):
     unit = get_object_or_404(
         StructureUnit.objects.for_organisation(request.organisation).select_related(

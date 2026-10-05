@@ -26,6 +26,6 @@ class ReportTests(TestCase):
   self.login(self.u);r=self.client.get(reverse('export_report',args=['members','csv']));text=r.content.decode();self.assertIn('A1,Alpha,Member',text);self.assertNotIn('B1,Secret,Member',text)
   r=self.client.get(reverse('export_report',args=['collections','xlsx']));wb=load_workbook(io.BytesIO(r.content));values=' '.join(str(v) for row in wb.active.iter_rows(values_only=True) for v in row);self.assertIn('Alpha Member',values);self.assertNotIn('Secret Member',values)
  def test_field_officer_cannot_export(self):
-  self.login(self.f);self.assertEqual(self.client.get(reverse('reports_home')).status_code,200);self.assertEqual(self.client.get(reverse('export_report',args=['members','csv'])).status_code,403)
+  self.login(self.f);self.assertRedirects(self.client.get(reverse('reports_home')),reverse('field_home'),fetch_redirect_response=False);self.assertEqual(self.client.get(reverse('export_report',args=['members','csv'])).status_code,403)
  def test_invalid_export_is_404(self):
   self.login(self.u);self.assertEqual(self.client.get(reverse('export_report',args=['bad','csv'])).status_code,404)
