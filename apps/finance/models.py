@@ -101,7 +101,7 @@ class FinancialRecord(OrganisationOwnedModel):
         """Money actually paid that is allocated to collections (active allocations only)."""
         if not self.pk: return Decimal("0.00")
         total = self.allocations.filter(removed_at__isnull=True).aggregate(total=models.Sum("amount"))["total"]
-        return total or Decimal("0.00")
+        return (total or Decimal("0.00")).quantize(Decimal("0.01"))
     @property
     def unallocated_amount(self):
         """Paid money on a For-collections payment not yet allocated to any collection."""

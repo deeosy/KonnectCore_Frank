@@ -103,7 +103,7 @@ class CollectionRecord(OrganisationOwnedModel):
         if not self.pk:
             return Decimal("0.00")
         total = self.allocations.filter(removed_at__isnull=True).exclude(payment__status="cancelled").aggregate(total=models.Sum("amount"))["total"]
-        return total or Decimal("0.00")
+        return (total or Decimal("0.00")).quantize(Decimal("0.01"))
 
     @property
     def unallocated_value(self):
