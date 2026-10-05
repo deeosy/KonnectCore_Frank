@@ -27,7 +27,7 @@ Always:
 - **Admin**: organisation settings and staff administration; full organisation operational access as modules are added.
 - **Manager**: operational management but no staff or platform administration.
 - **Field Officer**: assigned-member field workflows with a simplified role-specific workspace.
-- **KonnectCore Super Admin**: platform owner identity using Django superuser status; not an organisation role.
+- **KonnectCore Super Admin**: platform owner identity using Django superuser status; not an organisation role. Manages organisations but cannot view their private operational records (see *Pilot policy: Super Admin access*).
 
 Stage 1 enforces that only organisation Admins can list, create, or invite staff. Managers and Field Officers receive HTTP 403 for those operations. Organisation users cannot access platform administration.
 
@@ -103,6 +103,15 @@ Dashboard metrics, report tables, filters, and export generators begin with tena
 ## Stage 9 platform controls
 
 Platform organisation list, detail, and status-management routes require Django superuser status. Ordinary organisation users are redirected to login even when authenticated. Suspending or closing an organisation immediately prevents its staff from selecting or accessing that workspace; business data remains stored and isolated.
+
+### Pilot policy: Super Admin access
+
+For the pilot, KonnectCore Super Admins manage organisations but cannot view their private operational records.
+
+- **Allowed:** list organisations, view organisation details with aggregate user and member counts, create an organisation with its first Admin invitation link, and change organisation status.
+- **Not allowed:** members, member documents and photos, groups, farms, crops, collections, payments and dues, field visits, dashboards, reports and exports of any organisation. Organisation workspace and Field Workspace routes redirect Super Admins away; there is no impersonation or support login.
+- **Changing this rule:** any future support access (for example time-limited, organisation-approved and audited access) needs a separately approved support policy, documentation update and tests before it is built.
+- Superuser status alone never grants an organisation role. A Super Admin who also needs to work inside an organisation must hold a normal membership in it, which that organisation's Admin controls.
 
 ## Role-aware navigation and landing behavior
 
