@@ -90,7 +90,7 @@ Field Officer access is the intersection of active organisation membership and m
 
 `apps/organisations/scope.py` is the single owner of role-based record scope:
 
-- `visible_members(request)`: Admins and Managers see all members of the active organisation; Field Officers see only members in active units they are responsible for.
+- `visible_members(request)`: Admins and Managers see all members of the active organisation, including archived members. Field Officers see only members in active units they are responsible for, excluding archived members. The Field Workspace's `assigned_members` delegates to this helper, so the rule has one owner. Archived members remain in historical reports and exports.
 - `operational_staff_required`: guards organisation-wide pages (members, groups, farms, crops, collections, finance, reports). Field Officers are redirected to the Field Workspace.
 - Member photos, member document downloads, and collection photos filter by `visible_members`, so direct file URLs for out-of-scope members return 404.
 
