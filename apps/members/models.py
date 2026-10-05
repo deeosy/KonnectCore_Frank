@@ -4,6 +4,7 @@ from pathlib import Path
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models.functions import Lower
 
 from apps.organisations.models import OrganisationOwnedModel
 
@@ -42,7 +43,12 @@ class Member(OrganisationOwnedModel):
     class Meta:
         ordering = ["first_name", "last_name", "membership_number"]
         constraints = [
-            models.UniqueConstraint(fields=["organisation", "membership_number"], name="unique_org_membership_number"),
+            models.UniqueConstraint(
+                "organisation",
+                Lower("membership_number"),
+                name="unique_org_membership_number_ci",
+                violation_error_message="This membership number already exists in this organisation.",
+            ),
         ]
         indexes = [
             models.Index(fields=["organisation", "status"]),

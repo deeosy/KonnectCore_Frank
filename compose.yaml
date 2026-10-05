@@ -18,6 +18,8 @@
     env_file: [.env]
     environment:
       POSTGRES_HOST: db
+      # Local development only. Pilot/production must leave this unset or false.
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-true}
     volumes:
       - .:/app
     ports: ["8000:8000"]

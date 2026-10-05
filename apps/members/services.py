@@ -108,13 +108,18 @@ def _validated_rows(uploaded):
 def import_members(uploaded, organisation, actor):
     rows = _validated_rows(uploaded)
     seen = set()
-    existing = set(Member.objects.for_organisation(organisation).values_list("membership_number", flat=True))
+    existing = {
+        number.strip().lower()
+        for number in Member.objects.for_organisation(organisation).values_list("membership_number", flat=True)
+    }
     errors = []
     for line_number, data in rows:
-        number = data["membership_number"]
-        if number in seen or number in existing:
+        number = data["membership_number"].strip()
+        data["membership_number"] = number
+        key = number.lower()
+        if key in seen or key in existing:
             errors.append(f"Row {line_number}: membership number '{number}' already exists.")
-        seen.add(number)
+        seen.add(key)
     if errors:
         raise ValidationError(errors[:20])
     created = []

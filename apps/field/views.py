@@ -9,6 +9,7 @@ from apps.groups.models import GroupMemberAssignment
 from apps.members.forms import MemberForm
 from apps.members.models import Member,MemberHistory
 from apps.members.services import member_snapshot,record_history
+from apps.members.views import save_member_form
 from apps.organisations.decorators import organisation_required
 from apps.organisations.models import OrganisationMembership
 from .forms import FieldVisitForm
@@ -30,9 +31,11 @@ def home(request):
  return render(request,'field/home.html',{'members':qs,'query':q})
 @field_only
 def register_member(request):
- form=MemberForm(request.POST or None,request.FILES or None)
+ form=MemberForm(request.POST or None,request.FILES or None,organisation=request.organisation)
  if request.method=='POST' and form.is_valid():
-  x=form.save(False);x.organisation=request.organisation;x.created_by=request.user;x.updated_by=request.user;x.full_clean();x.save();record_history(x,MemberHistory.Action.CREATED,request.user,{"member":member_snapshot(x)});messages.success(request,'Member registered. Ask a Manager to assign the member to your group.');return redirect('field_home')
+  x=save_member_form(form,organisation=request.organisation,actor=request.user,creating=True)
+  if x is not None:
+   record_history(x,MemberHistory.Action.CREATED,request.user,{"member":member_snapshot(x)});messages.success(request,'Member registered. Ask a Manager to assign the member to your group.');return redirect('field_home')
  return render(request,'field/form.html',{'form':form,'title':'Register member'})
 @field_only
 def visit_add(request,member_id):

@@ -2,6 +2,7 @@ from pathlib import Path
 
 from django.contrib import messages
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
@@ -11,6 +12,32 @@ from apps.organisations.decorators import manager_or_admin_required, organisatio
 from .forms import MemberDocumentForm, MemberForm, MemberImportForm
 from .models import Member, MemberDocument, MemberHistory
 from .services import changed_fields, import_members, member_snapshot, record_history
+
+
+def save_member_form(form, *, organisation, actor, creating):
+    """Save a MemberForm, turning model/database duplicate errors into form errors.
+
+    Returns the saved member, or None when errors were added to the form.
+    """
+    member = form.save(commit=False)
+    if creating:
+        member.organisation = organisation
+        member.created_by = actor
+    member.updated_by = actor
+    try:
+        member.full_clean()
+        with transaction.atomic():
+            member.save()
+    except ValidationError as exc:
+        for field, errors in exc.message_dict.items():
+            target = field if field in form.fields else None
+            for error in errors:
+                form.add_error(target if target else "membership_number" if "membership number" in error.lower() else None, error)
+        return None
+    except IntegrityError:
+        form.add_error("membership_number", "This membership number already exists in this organisation.")
+        return None
+    return member
 
 
 @organisation_required
@@ -48,17 +75,13 @@ def member_detail(request, member_id):
 
 @manager_or_admin_required
 def member_create(request):
-    form = MemberForm(request.POST or None, request.FILES or None)
+    form = MemberForm(request.POST or None, request.FILES or None, organisation=request.organisation)
     if request.method == "POST" and form.is_valid():
-        member = form.save(commit=False)
-        member.organisation = request.organisation
-        member.created_by = request.user
-        member.updated_by = request.user
-        member.full_clean()
-        member.save()
-        record_history(member, MemberHistory.Action.CREATED, request.user, {"member": member_snapshot(member)})
-        messages.success(request, "Member registered.")
-        return redirect("member_detail", member_id=member.pk)
+        member = save_member_form(form, organisation=request.organisation, actor=request.user, creating=True)
+        if member is not None:
+            record_history(member, MemberHistory.Action.CREATED, request.user, {"member": member_snapshot(member)})
+            messages.success(request, "Member registered.")
+            return redirect("member_detail", member_id=member.pk)
     return render(request, "members/member_form.html", {"form": form, "title": "Register member"})
 
 
@@ -66,17 +89,15 @@ def member_create(request):
 def member_edit(request, member_id):
     member = get_object_or_404(Member.objects.for_organisation(request.organisation), pk=member_id)
     before = member_snapshot(member)
-    form = MemberForm(request.POST or None, request.FILES or None, instance=member)
+    form = MemberForm(request.POST or None, request.FILES or None, instance=member, organisation=request.organisation)
     if request.method == "POST" and form.is_valid():
-        member = form.save(commit=False)
-        member.updated_by = request.user
-        member.full_clean()
-        member.save()
-        changes = changed_fields(before, member_snapshot(member))
-        if changes:
-            record_history(member, MemberHistory.Action.UPDATED, request.user, changes)
-        messages.success(request, "Member updated.")
-        return redirect("member_detail", member_id=member.pk)
+        saved = save_member_form(form, organisation=request.organisation, actor=request.user, creating=False)
+        if saved is not None:
+            changes = changed_fields(before, member_snapshot(saved))
+            if changes:
+                record_history(saved, MemberHistory.Action.UPDATED, request.user, changes)
+            messages.success(request, "Member updated.")
+            return redirect("member_detail", member_id=saved.pk)
     return render(request, "members/member_form.html", {"form": form, "member": member, "title": "Edit member"})
 
 
