@@ -26,6 +26,72 @@ class CollectionFilterForm(forms.Form):
     date_to = forms.DateField(required=False)
 
 
+class CollectionVoidForm(forms.Form):
+    """Void a collection (UAT I-5). See docs/architecture.md, Voiding collections."""
+
+    DECISION_NOT_RELATED = "not_related"
+    DECISION_RELATED = "related"
+    DECISIONS = [
+        (DECISION_NOT_RELATED, "Not related to this collection"),
+        (DECISION_RELATED, "Related - I will link the payment first"),
+    ]
+
+    void_reason = forms.CharField(
+        label="Reason for voiding",
+        widget=forms.Textarea(attrs={"rows": 3}),
+        help_text="For example: duplicate entry, recorded for the wrong member.",
+    )
+
+    def __init__(self, *args, unresolved_payments=(), **kwargs):
+        super().__init__(*args, **kwargs)
+        self.unresolved_payments = list(unresolved_payments)
+        if self.unresolved_payments:
+            self.fields["reviewed"] = forms.BooleanField(
+                label="I have reviewed the payments listed above",
+                required=True,
+            )
+            self.fields["review_decision"] = forms.ChoiceField(
+                label="Are any of these payments for this collection?",
+                choices=self.DECISIONS,
+                widget=forms.RadioSelect,
+            )
+            self.fields["review_reason"] = forms.CharField(
+                label="Reason for your decision",
+                widget=forms.Textarea(attrs={"rows": 2}),
+            )
+
+    def clean_void_reason(self):
+        value = self.cleaned_data["void_reason"].strip()
+        if not value:
+            raise forms.ValidationError("Give a reason for voiding this collection.")
+        return value
+
+    def clean_review_reason(self):
+        value = self.cleaned_data.get("review_reason", "").strip()
+        if not value:
+            raise forms.ValidationError("Explain your decision about these payments.")
+        return value
+
+    def clean(self):
+        data = super().clean()
+        if data.get("review_decision") == self.DECISION_RELATED:
+            raise forms.ValidationError(
+                "Link the related payment to this collection (or the correct collection) before voiding. "
+                "Do not cancel a genuine payment to allow a void."
+            )
+        return data
+
+    def review_record(self):
+        """Stored on the collection with the void."""
+        if not self.unresolved_payments:
+            return None
+        return {
+            "decision": self.cleaned_data["review_decision"],
+            "reason": self.cleaned_data["review_reason"],
+            "payment_ids": [str(p.pk) for p in self.unresolved_payments],
+        }
+
+
 class CollectionRecordForm(forms.ModelForm):
     photo = LimitedImageField(required=False)
 

@@ -69,7 +69,7 @@ def dashboard(request):
         return redirect("field_home")
     org = request.organisation
     members = Member.objects.for_organisation(org)
-    collections = CollectionRecord.objects.for_organisation(org).select_related("member", "crop", "recorded_by")
+    collections = CollectionRecord.objects.for_organisation(org).filter(voided_at__isnull=True).select_related("member", "crop", "recorded_by")
     finance = FinancialRecord.objects.for_organisation(org).select_related("member", "recorded_by")
     quantities = list(collections.values("quantity_unit").annotate(total=Sum("quantity")).order_by("quantity_unit"))
     # Money definitions (UAT I-6): `amount` is owed/scheduled, `paid_amount` is money actually paid.
@@ -101,22 +101,34 @@ def dashboard(request):
 @operational_staff_required
 def reports_home(request):
     org=request.organisation
-    collections=_filters(request,CollectionRecord.objects.for_organisation(org).select_related("member","crop"),"collections")
+    collections=_filters(request,CollectionRecord.objects.for_organisation(org).filter(voided_at__isnull=True).select_related("member","crop"),"collections")
     finance=_filters(request,FinancialRecord.objects.for_organisation(org).select_related("member"),"finance")
     members=Member.objects.for_organisation(org)
     groups=StructureUnit.objects.for_organisation(org).annotate(total_members=Count("member_assignments"))
     return render(request,"reports/home.html",{"collections":collections[:100],"finance":finance[:100],"member_rows":members[:100],"group_rows":groups[:100],"members":members,"groups":groups,"crops":Crop.objects.for_organisation(org),"statuses":FinancialRecord.Status.choices,"querystring":request.GET.urlencode()})
+
+def _purpose_label(record):
+    """Purpose shown in exports; only payments to members carry one."""
+    if record.record_type!=FinancialRecord.Type.MEMBER_PAYMENT: return ""
+    if record.is_unresolved_purpose: return "Not recorded (unresolved)"
+    return record.get_purpose_display()
+
+def _settlement(record):
+    """(allocated, unallocated) of money actually paid, for For-collections payments only."""
+    if record.record_type==FinancialRecord.Type.MEMBER_PAYMENT and record.purpose==FinancialRecord.Purpose.COLLECTIONS:
+        return [record.allocated_amount,record.unallocated_amount]
+    return ["",""]
 
 def _rows(request,report):
     org=request.organisation
     if report=="members":
         return ["Membership number","First name","Last name","Phone","Location","Status"],([m.membership_number,m.first_name,m.last_name,m.phone,m.location,m.get_status_display()] for m in Member.objects.for_organisation(org))
     if report=="collections":
-        qs=_filters(request,CollectionRecord.objects.for_organisation(org).select_related("member","crop"),"collections")
+        qs=_filters(request,CollectionRecord.objects.for_organisation(org).filter(voided_at__isnull=True).select_related("member","crop"),"collections")
         return ["Date","Member","Membership number","Crop","Quantity","Unit","Grade","Location","Price per unit","Total value"],([x.collection_date,x.member.full_name,x.member.membership_number,x.crop.display_name,x.quantity,x.get_quantity_unit_display(),x.quality_grade,x.collection_location,x.price_per_unit,x.total_value] for x in qs)
     if report=="finance":
         qs=_filters(request,FinancialRecord.objects.for_organisation(org).select_related("member"),"finance")
-        return ["Date","Type","Direction","Member","Amount","Paid","Outstanding","Method","Status","Reference"],([x.payment_date,x.get_record_type_display(),direction_label(x),x.member.full_name if x.member else "Organisation",x.amount,x.paid_amount,x.outstanding_amount,x.get_payment_method_display(),x.get_status_display(),x.reference_number] for x in qs)
+        return ["Date","Type","Direction","Member","Amount","Paid","Outstanding","Method","Status","Reference","Purpose","Allocated to collections","Unallocated paid balance"],([x.payment_date,x.get_record_type_display(),direction_label(x),x.member.full_name if x.member else "Organisation",x.amount,x.paid_amount,x.outstanding_amount,x.get_payment_method_display(),x.get_status_display(),x.reference_number,_purpose_label(x),*_settlement(x)] for x in qs)
     if report=="groups":
         qs=StructureUnit.objects.for_organisation(org).select_related("parent","leader","field_officer__user").annotate(total_members=Count("member_assignments"))
         return ["Name","Type","Parent","Leader","Field Officer","Members","Active"],([x.name,x.get_unit_type_display(),x.parent.name if x.parent else "",x.leader.full_name if x.leader else "",str(x.field_officer.user) if x.field_officer else "",x.total_members,"Yes" if x.is_active else "No"] for x in qs)

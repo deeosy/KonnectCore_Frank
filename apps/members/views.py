@@ -57,6 +57,9 @@ def member_list(request):
         )
     if status in Member.Status.values:
         members = members.filter(status=status)
+    else:
+        # Archived members are hidden by default; choose the Archived filter to see them.
+        members = members.exclude(status=Member.Status.ARCHIVED)
     return render(request, "members/member_list.html", {
         "members": members,
         "query": query,
@@ -100,6 +103,56 @@ def member_edit(request, member_id):
             messages.success(request, "Member updated.")
             return redirect("member_detail", member_id=saved.pk)
     return render(request, "members/member_form.html", {"form": form, "member": member, "title": "Edit member"})
+
+
+def _status_before_archive(member):
+    """Status recorded when the member was last archived; Active if unknown."""
+    event = member.history.filter(action=MemberHistory.Action.ARCHIVED).order_by("-created_at").first()
+    previous = (event.changes or {}).get("previous_status") if event else None
+    if previous in Member.Status.values and previous != Member.Status.ARCHIVED:
+        return previous
+    return Member.Status.ACTIVE
+
+
+@manager_or_admin_required
+def member_archive(request, member_id):
+    """Archive or restore a member (UAT I-5). Records and historical reports are kept."""
+    member = get_object_or_404(Member.objects.for_organisation(request.organisation), pk=member_id)
+    archiving = member.status != Member.Status.ARCHIVED
+    error = ""
+    reason = ""
+    if request.method == "POST":
+        reason = request.POST.get("reason", "").strip()
+        if not reason:
+            error = "Give a reason for archiving this member." if archiving else "Give a reason for restoring this member."
+        else:
+            with transaction.atomic():
+                locked = Member.objects.select_for_update().get(pk=member.pk, organisation=request.organisation)
+                if (locked.status != Member.Status.ARCHIVED) != archiving:
+                    messages.info(request, "This member's archive status was already changed.")
+                    return redirect("member_detail", member_id=member.pk)
+                previous = locked.status
+                locked.status = Member.Status.ARCHIVED if archiving else _status_before_archive(locked)
+                locked.updated_by = request.user
+                locked.save(update_fields=["status", "updated_by", "updated_at"])
+                record_history(
+                    locked,
+                    MemberHistory.Action.ARCHIVED if archiving else MemberHistory.Action.RESTORED,
+                    request.user,
+                    {"previous_status": previous, "new_status": locked.status, "reason": reason},
+                )
+            messages.success(
+                request,
+                "Member archived. Their records stay in historical reports." if archiving else "Member restored.",
+            )
+            return redirect("member_detail", member_id=member.pk)
+    return render(request, "members/member_archive.html", {
+        "member": member,
+        "archiving": archiving,
+        "error": error,
+        "reason": reason,
+        "restore_status": None if archiving else Member.Status(_status_before_archive(member)).label,
+    })
 
 
 @manager_or_admin_required

@@ -7,5 +7,6 @@ urlpatterns = [
     path("record/", views.collection_create, name="collection_create"),
     path("<uuid:record_id>/", views.collection_detail, name="collection_detail"),
     path("<uuid:record_id>/edit/", views.collection_edit, name="collection_edit"),
+    path("<uuid:record_id>/void/", views.collection_void, name="collection_void"),
     path("<uuid:record_id>/photo/", views.collection_photo, name="collection_photo"),
 ]

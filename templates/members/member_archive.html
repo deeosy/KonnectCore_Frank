@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}{% if archiving %}Archive member{% else %}Restore member{% endif %}{% endblock %}
+{% block header_title %}Members{% endblock %}
+{% block content %}
+<div class="form-card wide">
+  <p class="eyebrow"><a href="{% url 'member_detail' member.id %}">{{ member.full_name }}</a></p>
+  <h1>{% if archiving %}Archive member{% else %}Restore member{% endif %}</h1>
+  <p class="muted">{{ member.full_name }} ({{ member.membership_number }}) - current status: {{ member.get_status_display }}.</p>
+  {% if archiving %}
+    <p>Archiving hides this member from the default member list and from field officers' workspaces. Nothing is deleted: farms, collections, payments, documents and history are kept, and the member's past collections and payments stay in historical reports and exports. You can restore the member later.</p>
+  {% else %}
+    <p>Restoring returns this member to the default member list with status <strong>{{ restore_status }}</strong>. Field officers see them again if they are assigned to one of their active groups.</p>
+  {% endif %}
+  {% if error %}<div class="message error-message" role="alert">{{ error }}</div>{% endif %}
+  <form method="post" class="stack" novalidate>
+    {% csrf_token %}
+    <p><label for="id_reason">{% if archiving %}Reason for archiving{% else %}Reason for restoring{% endif %}</label>
+      <textarea id="id_reason" name="reason" rows="3" required>{{ reason }}</textarea>
+      <span class="helptext">{% if archiving %}For example: left the cooperative, duplicate registration.{% else %}For example: rejoined the cooperative, archived by mistake.{% endif %}</span></p>
+    <div class="form-actions"><a href="{% url 'member_detail' member.id %}">Cancel</a><button class="button">{% if archiving %}Archive member{% else %}Restore member{% endif %}</button></div>
+  </form>
+</div>
+{% endblock %}

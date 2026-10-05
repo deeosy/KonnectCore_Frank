@@ -43,6 +43,12 @@ class CollectionRecord(OrganisationOwnedModel):
     # One-time form submission key (see apps/core/submissions.py); prevents duplicate records.
     submission_key = models.UUIDField(null=True, blank=True, editable=False)
     submission_fingerprint = models.CharField(max_length=64, blank=True, editable=False)
+    # Void (UAT I-5): voided collections stay visible for audit but are excluded from totals.
+    voided_at = models.DateTimeField(null=True, blank=True, editable=False)
+    voided_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="collection_records_voided", editable=False)
+    void_reason = models.TextField(blank=True, editable=False)
+    # Review of the member's unresolved payments at void time: {"decision", "reason", "payment_ids"}.
+    void_review = models.JSONField(null=True, blank=True, editable=False)
 
     class Meta:
         ordering = ["-collection_date", "-created_at"]
@@ -80,8 +86,28 @@ class CollectionRecord(OrganisationOwnedModel):
             errors["recorded_by"] = "Recorder must belong to the same organisation."
         if not self.collection_location:
             errors["collection_location"] = "Collection location is required."
+        if self.pk and not self._state.adding and self.quantity is not None and self.price_per_unit is not None:
+            allocated = self.allocated_amount
+            if allocated and self.calculate_total() < allocated:
+                errors["quantity"] = f"This collection has {allocated} allocated from payments. Its value cannot fall below that. Move or remove allocations first."
         if errors:
             raise ValidationError(errors)
+
+    @property
+    def is_voided(self):
+        return self.voided_at is not None
+
+    @property
+    def allocated_amount(self):
+        """Money allocated to this collection from active allocations of non-cancelled payments."""
+        if not self.pk:
+            return Decimal("0.00")
+        total = self.allocations.filter(removed_at__isnull=True).exclude(payment__status="cancelled").aggregate(total=models.Sum("amount"))["total"]
+        return total or Decimal("0.00")
+
+    @property
+    def unallocated_value(self):
+        return (self.total_value or Decimal("0.00")) - self.allocated_amount
 
     def calculate_total(self):
         if self.quantity is None or self.price_per_unit is None:

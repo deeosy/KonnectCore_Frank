@@ -36,7 +36,7 @@ def visible_members(request):
         return members.filter(
             group_assignments__unit__field_officer=membership,
             group_assignments__unit__is_active=True,
-        ).distinct()
+        ).exclude(status=Member.Status.ARCHIVED).distinct()
     return members.none()
 
 

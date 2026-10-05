@@ -47,7 +47,7 @@
   <section class="card">
     <h2>Collections</h2>
     {% for record in member.collection_records.all %}
-      <p>{{ record.collection_date }} · {{ record.crop.display_name }} · {{ record.quantity }} {{ record.get_quantity_unit_display }} · {{ record.total_value }}</p>
+      <p{% if record.is_voided %} class="muted"{% endif %}>{% if record.is_voided %}<span class="status status-cancelled">Voided</span> {% endif %}{{ record.collection_date }} · {{ record.crop.display_name }} · {{ record.quantity }} {{ record.get_quantity_unit_display }} · {{ record.total_value }}</p>
     {% empty %}
       <p class="muted">No collections recorded yet.</p>
     {% endfor %}

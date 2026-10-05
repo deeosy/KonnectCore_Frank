@@ -3,7 +3,9 @@ from django.shortcuts import get_object_or_404,redirect,render
 from django.contrib import messages
 from apps.organisations.decorators import manager_or_admin_required,organisation_required
 from apps.organisations.scope import operational_staff_required
-from apps.core.submissions import SubmissionConflict, save_once
+from django.core.exceptions import ValidationError
+from apps.core.submissions import SubmissionConflict
+from .allocations import save_payment_with_allocations
 from .forms import FinancialRecordForm
 from .models import FinancialRecord
 
@@ -24,9 +26,11 @@ def finance_create(request):
     form=FinancialRecordForm(request.POST or None,organisation=request.organisation,recorded_by=request.user)
     if request.method=="POST" and form.is_valid():
         try:
-            item,created=save_once(form,organisation=request.organisation,actor=request.user)
+            item,created=save_payment_with_allocations(form,actor=request.user)
         except SubmissionConflict as exc:
             form.add_error(None,str(exc))
+        except ValidationError as exc:
+            form.add_error(None,exc.messages)
         else:
             messages.success(request,"Financial record saved." if created else "This financial record was already saved."); return redirect("finance_detail",record_id=item.pk)
     return render(request,"finance/form.html",{"form":form,"title":"Record payment, due or expense"})
@@ -35,5 +39,10 @@ def finance_edit(request,record_id):
     item=get_object_or_404(FinancialRecord.objects.for_organisation(request.organisation),pk=record_id)
     form=FinancialRecordForm(request.POST or None,instance=item,organisation=request.organisation,recorded_by=request.user)
     if request.method=="POST" and form.is_valid():
-        item=form.save(); messages.success(request,"Financial record updated."); return redirect("finance_detail",record_id=item.pk)
+        try:
+            item,_created=save_payment_with_allocations(form,actor=request.user)
+        except ValidationError as exc:
+            form.add_error(None,exc.messages)
+        else:
+            messages.success(request,"Financial record updated."); return redirect("finance_detail",record_id=item.pk)
     return render(request,"finance/form.html",{"form":form,"title":"Edit financial record","record":item})

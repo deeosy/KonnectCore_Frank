@@ -20,9 +20,8 @@ from apps.core.submissions import SubmissionConflict,save_once
 from .forms import FieldVisitForm
 
 def assigned_members(request):
- m=request.organisation_membership
- if m.role in (OrganisationMembership.Role.ADMIN,OrganisationMembership.Role.MANAGER):return Member.objects.for_organisation(request.organisation)
- return Member.objects.for_organisation(request.organisation).filter(group_assignments__unit__field_officer=m,group_assignments__unit__is_active=True).distinct()
+ """Field Workspace member scope; delegates to the single owner in organisations.scope."""
+ return visible_members(request)
 def field_only(view):
  @organisation_required
  def wrapped(request,*a,**k):

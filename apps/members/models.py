@@ -25,6 +25,7 @@ class Member(OrganisationOwnedModel):
         INACTIVE = "inactive", "Inactive"
         SUSPENDED = "suspended", "Suspended"
         DECEASED = "deceased", "Deceased"
+        ARCHIVED = "archived", "Archived"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     first_name = models.CharField(max_length=100)
@@ -96,6 +97,8 @@ class MemberHistory(OrganisationOwnedModel):
         UPDATED = "updated", "Updated"
         DOCUMENT_ADDED = "document_added", "Document added"
         IMPORTED = "imported", "Imported"
+        ARCHIVED = "archived", "Archived"
+        RESTORED = "restored", "Restored"
 
     member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name="history")
     action = models.CharField(max_length=24, choices=Action.choices)

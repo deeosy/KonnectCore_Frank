@@ -103,7 +103,40 @@ Collection totals are calculated server-side with decimal arithmetic. The origin
 
 ### Finance
 
-Finance is a simple operational register rather than a full accounting system. It supports member payments, dues, contributions, savings, and organisation expenses. Outstanding value is derived from amount minus paid amount, with cancelled records excluded.
+Finance is a simple operational register rather than a full accounting system. It supports member payments, dues, contributions, savings, and organisation expenses.
+
+#### Meaning of FinancialRecord fields
+
+| Field | Meaning |
+| --- | --- |
+| `amount` | The total owed or scheduled for this record. It is not money that has moved. |
+| `paid_amount` | Money actually paid so far. Always between 0 and `amount`. |
+| `status` | Must agree with `paid_amount`: Pending means nothing paid, Part-paid means some but not all, Paid means `paid_amount` equals `amount`. Cancelled means the record no longer counts as owed. |
+| Outstanding | Derived: `amount - paid_amount`, or zero when Cancelled. |
+
+Direction: Payment to member and Organisation expense are outgoing; Membership due, Contribution and Savings are incoming. Dashboard and export totals are calculated from these records only, using `paid_amount` for money paid and Outstanding for money still owed. A record with GHS 1,000 `amount` and GHS 400 `paid_amount` counts as GHS 400 paid and GHS 600 owed.
+
+#### Collection settlement (allocations)
+
+Only outgoing Payment to member records can be linked to collections. Dues, contributions and savings are outside this workflow.
+
+- **Purpose.** A Payment to member is either *For collections* (at least one allocation) or *Other* (a written description is required). Records created before allocations existed show *Purpose not recorded* and are unresolved: they are not evidence that any collection is paid or unpaid.
+- **Allocated means money actually paid.** Allocation amounts are portions of `paid_amount`, never of `amount`. The sum of a payment's active allocations cannot exceed its `paid_amount`. Scheduled but unpaid money is never allocated.
+- **Distribution of partial payments.** Staff enter an explicit amount for each collection. The system never splits a payment automatically and never copies the full payment amount onto each collection.
+- **Unallocated balance.** For a *For collections* payment, `paid_amount - allocated` is shown as the unallocated balance on the payment and in the finance list and export, so no paid money is left unexplained.
+- **Collection limits.** Same organisation and same member as the payment. The total allocated to a collection from non-cancelled payments cannot exceed its `total_value`. New allocations to voided collections are rejected. A payment allocates to a given collection at most once.
+- **Collection figures.** *Value* is `total_value`; *Allocated* is the sum of active allocations from non-cancelled payments; *Unallocated value* is the difference. The collection page does not use the word Paid for allocated money.
+- **Revalidation.** Editing a payment's `paid_amount` or status, editing an allocation, or editing a collection's quantity or price re-checks these limits. An edit that would break them is rejected with an explanation.
+- **Atomic saves.** A payment and its allocations are saved in one transaction with duplicate-submission protection; a failed save leaves neither.
+- **Corrections.** Allocations are moved or removed rather than cancelling genuine payments. Removed or moved allocations are kept with who changed them, when and why.
+- **Cancelled payments.** Their allocations stop counting towards collection figures and void checks; the history remains.
+
+#### Voiding collections and archiving members
+
+- Only Admins and Managers can void a collection, with a required reason and a confirmation step. Voided collections are excluded from collection totals, reports and exports, and remain visible, struck through, with who voided them and why.
+- Voiding is blocked while any non-cancelled payment has an active allocation to the collection. The user is told to move or remove the allocation first; the app does not suggest cancelling the payment.
+- If the member has non-cancelled Payment to member records with no recorded purpose, the void screen lists them. The Admin or Manager records a decision (*Not related* or *Related, will link first*) and a reason; *Related* blocks the void. The decision, reason and reviewed payment IDs are stored with the void.
+- Archived members are hidden from default lists and the Field Workspace. Their collections, payments and history stay in historical reports and exports.
 
 ### Field Workspace
 

@@ -12,7 +12,10 @@ from apps.organisations.scope import operational_staff_required, visible_member_
 
 from apps.core.submissions import SubmissionConflict, save_once
 
-from .forms import CollectionFilterForm, CollectionRecordForm
+from django.db import transaction
+from django.utils import timezone
+
+from .forms import CollectionFilterForm, CollectionRecordForm, CollectionVoidForm
 from .models import CollectionRecord
 
 
@@ -116,6 +119,9 @@ def collection_edit(request, record_id):
         CollectionRecord.objects.for_organisation(request.organisation),
         pk=record_id,
     )
+    if record.is_voided:
+        messages.error(request, "Voided collections cannot be edited.")
+        return redirect("collection_detail", record_id=record.pk)
     form = CollectionRecordForm(
         request.POST or None,
         request.FILES or None,
@@ -131,6 +137,63 @@ def collection_edit(request, record_id):
         "form": form,
         "title": "Edit produce collection",
         "record": record,
+    })
+
+
+def _void_blockers(record):
+    """Active allocations from non-cancelled payments; any of these blocks a void."""
+    return list(
+        record.allocations.filter(removed_at__isnull=True)
+        .exclude(payment__status="cancelled")
+        .select_related("payment")
+    )
+
+
+def _unresolved_payments(record):
+    """The member's non-cancelled payments to member with no recorded purpose."""
+    from apps.finance.models import FinancialRecord
+
+    return list(
+        FinancialRecord.objects.for_organisation(record.organisation)
+        .filter(member_id=record.member_id, record_type=FinancialRecord.Type.MEMBER_PAYMENT, purpose="")
+        .exclude(status=FinancialRecord.Status.CANCELLED)
+        .order_by("-payment_date")
+    )
+
+
+@manager_or_admin_required
+def collection_void(request, record_id):
+    record = get_object_or_404(
+        CollectionRecord.objects.for_organisation(request.organisation).select_related("member", "crop"),
+        pk=record_id,
+    )
+    if record.is_voided:
+        messages.info(request, "This collection is already voided.")
+        return redirect("collection_detail", record_id=record.pk)
+    blockers = _void_blockers(record)
+    unresolved = _unresolved_payments(record)
+    form = CollectionVoidForm(request.POST or None, unresolved_payments=unresolved)
+    if request.method == "POST" and not blockers and form.is_valid():
+        with transaction.atomic():
+            locked = CollectionRecord.objects.select_for_update().get(pk=record.pk, organisation=request.organisation)
+            if locked.is_voided:
+                messages.info(request, "This collection is already voided.")
+                return redirect("collection_detail", record_id=record.pk)
+            if _void_blockers(locked):
+                messages.error(request, "A payment was allocated to this collection while you were reviewing it. Voiding is blocked.")
+                return redirect("collection_void", record_id=record.pk)
+            locked.voided_at = timezone.now()
+            locked.voided_by = request.user
+            locked.void_reason = form.cleaned_data["void_reason"]
+            locked.void_review = form.review_record()
+            locked.save(update_fields=["voided_at", "voided_by", "void_reason", "void_review", "updated_at"])
+        messages.success(request, "Collection voided. It is excluded from totals, reports and exports, and kept here for audit.")
+        return redirect("collection_detail", record_id=record.pk)
+    return render(request, "collections/collection_void.html", {
+        "record": record,
+        "form": form,
+        "blockers": blockers,
+        "unresolved_payments": unresolved,
     })
 
 
