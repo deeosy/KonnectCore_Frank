@@ -8,6 +8,7 @@ from django.utils import timezone
 from .decorators import admin_required, organisation_required
 from .forms import AcceptInvitationForm, LoginForm, PlatformOrganisationForm, PlatformOrganisationStatusForm, StaffCreateForm, StaffInviteForm
 from .invitations import StaffInvitation
+from django.views.decorators.http import require_POST
 from .middleware import ActiveOrganisationMiddleware
 from .models import Organisation, OrganisationMembership
 
@@ -62,7 +63,7 @@ def workspace(request):
 @admin_required
 def staff_list(request):
     staff = OrganisationMembership.objects.select_related("user").filter(organisation=request.organisation)
-    invitations = StaffInvitation.objects.filter(organisation=request.organisation, accepted_at__isnull=True)
+    invitations = StaffInvitation.objects.filter(organisation=request.organisation, accepted_at__isnull=True, cancelled_at__isnull=True)
     return render(request, "organisations/staff_list.html", {"staff": staff, "invitations": invitations})
 
 @admin_required
@@ -85,6 +86,17 @@ def staff_invite(request):
             invite_url = request.build_absolute_uri(f"/invitations/{token}/accept/")
             messages.success(request, "Invitation created. Share the secure link below; it expires in 7 days.")
     return render(request, "organisations/form.html", {"form": form, "title": "Invite staff user", "invite_url": invite_url})
+
+@admin_required
+@require_POST
+def staff_invitation_cancel(request, invitation_id):
+    # Only pending invitations in the active organisation can be cancelled; the record is kept for audit.
+    invitation = get_object_or_404(StaffInvitation, pk=invitation_id, organisation=request.organisation, accepted_at__isnull=True, cancelled_at__isnull=True)
+    invitation.cancelled_at = timezone.now()
+    invitation.cancelled_by = request.user
+    invitation.save(update_fields=["cancelled_at", "cancelled_by"])
+    messages.success(request, f"Invitation for {invitation.email} cancelled. The link no longer works.")
+    return redirect("staff_list")
 
 def accept_invitation(request, token):
     invitation = get_object_or_404(StaffInvitation.objects.select_related("organisation"), token_hash=StaffInvitation.digest(token))

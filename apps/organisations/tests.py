@@ -206,3 +206,82 @@ class PlatformAdministrationTests(TenantFixture):
     def test_platform_detail_unknown_organisation_is_404(self):
         self.client.force_login(self.owner)
         self.assertEqual(self.client.get(reverse("platform_organisation_detail", args=[999999])).status_code, 404)
+
+
+class InvitationCancelTests(TenantFixture):
+    def issue(self, email="pending@alpha.test", organisation=None, role=OrganisationMembership.Role.FIELD_OFFICER):
+        return StaffInvitation.issue(organisation=organisation or self.alpha, email=email, role=role, invited_by=self.alpha_admin)
+
+    def cancel_url(self, invitation):
+        return reverse("staff_invitation_cancel", args=[invitation.pk])
+
+    def test_admin_cancels_pending_invitation_and_record_is_kept(self):
+        invitation, token = self.issue()
+        self.login_as(self.alpha_admin, self.alpha)
+        response = self.client.post(self.cancel_url(invitation))
+        self.assertRedirects(response, reverse("staff_list"))
+        invitation.refresh_from_db()
+        self.assertIsNotNone(invitation.cancelled_at)
+        self.assertEqual(invitation.cancelled_by, self.alpha_admin)
+        self.assertFalse(invitation.is_valid)
+        self.client.logout()
+        self.assertEqual(self.client.get(reverse("accept_invitation", args=[token])).status_code, 403)
+        self.assertFalse(User.objects.filter(email="pending@alpha.test").exists())
+
+    def test_cancel_requires_post(self):
+        invitation, _ = self.issue()
+        self.login_as(self.alpha_admin, self.alpha)
+        self.assertEqual(self.client.get(self.cancel_url(invitation)).status_code, 405)
+        invitation.refresh_from_db()
+        self.assertIsNone(invitation.cancelled_at)
+
+    def test_manager_and_field_officer_cannot_cancel(self):
+        invitation, _ = self.issue()
+        for user in (self.manager, self.field):
+            self.login_as(user, self.alpha)
+            self.client.post(self.cancel_url(invitation))
+            invitation.refresh_from_db()
+            self.assertIsNone(invitation.cancelled_at)
+
+    def test_other_organisation_admin_gets_404(self):
+        invitation, _ = self.issue()
+        self.login_as(self.beta_admin, self.beta)
+        self.assertEqual(self.client.post(self.cancel_url(invitation)).status_code, 404)
+        invitation.refresh_from_db()
+        self.assertIsNone(invitation.cancelled_at)
+
+    def test_accepted_or_already_cancelled_invitation_cannot_be_cancelled(self):
+        accepted, _ = self.issue(email="accepted@alpha.test")
+        accepted.accepted_at = timezone.now()
+        accepted.save(update_fields=["accepted_at"])
+        self.login_as(self.alpha_admin, self.alpha)
+        self.assertEqual(self.client.post(self.cancel_url(accepted)).status_code, 404)
+        accepted.refresh_from_db()
+        self.assertIsNone(accepted.cancelled_at)
+        pending, _ = self.issue()
+        self.client.post(self.cancel_url(pending))
+        pending.refresh_from_db()
+        first_cancel = pending.cancelled_at
+        self.assertEqual(self.client.post(self.cancel_url(pending)).status_code, 404)
+        pending.refresh_from_db()
+        self.assertEqual(pending.cancelled_at, first_cancel)
+
+    def test_same_email_can_be_invited_again_and_cancelled_record_survives(self):
+        old, _ = self.issue()
+        self.login_as(self.alpha_admin, self.alpha)
+        self.client.post(self.cancel_url(old))
+        new, new_token = self.issue(role=OrganisationMembership.Role.MANAGER)
+        self.assertTrue(StaffInvitation.objects.filter(pk=old.pk, cancelled_at__isnull=False).exists())
+        self.assertTrue(new.is_valid)
+        self.assertEqual(self.client.get(reverse("accept_invitation", args=[new_token])).status_code, 200)
+
+    def test_staff_list_hides_cancelled_and_offers_cancel_for_pending(self):
+        cancelled, _ = self.issue(email="gone@alpha.test")
+        pending, _ = self.issue(email="waiting@alpha.test")
+        self.login_as(self.alpha_admin, self.alpha)
+        self.client.post(self.cancel_url(cancelled))
+        response = self.client.get(reverse("staff_list"))
+        # The success message names the cancelled email, so check the listed invitations, not the whole page.
+        self.assertEqual([i.email for i in response.context["invitations"]], ["waiting@alpha.test"])
+        self.assertNotContains(response, self.cancel_url(cancelled))
+        self.assertContains(response, self.cancel_url(pending))
