@@ -1,10 +1,10 @@
+from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
 
 from apps.organisations import views
 
 urlpatterns = [
-    path("django-admin/", admin.site.urls),
     path("login/", views.RoleAwareLoginView.as_view(), name="login"),
     path("logout/", views.auth_views.LogoutView.as_view(), name="logout"),
     path("", views.entrypoint, name="entrypoint"),
@@ -26,3 +26,7 @@ urlpatterns = [
     path("platform/organisations/create/", views.platform_organisation_create, name="platform_organisation_create"),
     path("platform/organisations/<int:organisation_id>/", views.platform_organisation_detail, name="platform_organisation_detail"),
 ]
+
+# Off on the hosted server: Django admin bypasses organisation privacy rules (see settings).
+if settings.DJANGO_ADMIN_ENABLED:
+    urlpatterns.insert(0, path("django-admin/", admin.site.urls))

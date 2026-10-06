@@ -21,6 +21,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "apps.core.middleware.NoStoreForAuthenticatedMiddleware",
     "apps.organisations.middleware.ActiveOrganisationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -90,6 +91,10 @@ if SECURE_DEPLOYMENT:
     SECURE_HSTS_PRELOAD = False
     SECURE_CONTENT_TYPE_NOSNIFF = True
     SECURE_REFERRER_POLICY = "same-origin"
+
+# Django's built-in admin bypasses KonnectCore's organisation and Super Admin privacy rules,
+# so it is off on the hosted server (DJANGO_SECURE=true) unless DJANGO_ADMIN_ENABLED=true.
+DJANGO_ADMIN_ENABLED = os.getenv("DJANGO_ADMIN_ENABLED", "false" if SECURE_DEPLOYMENT else "true").lower() == "true"
 
 LOGGING = {
     "version": 1,
