@@ -5,7 +5,7 @@ from django.test import TestCase
 from apps.collections.models import CollectionRecord
 from apps.farms.models import Farm
 from apps.field.models import FieldVisit
-from apps.finance.models import FinancialRecord
+from apps.finance.models import FinancialRecord, PaymentAllocation
 from apps.groups.models import StructureUnit
 from apps.members.models import Member, MemberHistory
 from apps.organisations.models import Organisation, OrganisationMembership
@@ -42,6 +42,21 @@ class SeedDemoDataCommandTests(TestCase):
         self.assertFalse(
             MemberHistory.objects.for_organisation(self.organisation).exclude(changes={}).exists()
         )
+
+    def test_seeded_member_payments_have_purpose_and_full_allocations(self):
+        call_command("seed_demo_data", organisation=self.organisation.slug)
+        call_command("seed_demo_data", organisation=self.organisation.slug)
+        payments = FinancialRecord.objects.for_organisation(self.organisation).filter(
+            record_type=FinancialRecord.Type.MEMBER_PAYMENT
+        )
+        self.assertEqual(payments.count(), 7)
+        self.assertFalse(payments.filter(purpose="").exists())
+        active = PaymentAllocation.objects.filter(organisation=self.organisation, removed_at__isnull=True)
+        self.assertEqual(active.count(), 7)
+        for payment in payments:
+            allocations = list(active.filter(payment=payment))
+            self.assertEqual(sum(a.amount for a in allocations), payment.paid_amount)
+            self.assertTrue(all(a.collection.member_id == payment.member_id for a in allocations))
 
     @staticmethod
     def _counts(organisation):

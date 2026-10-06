@@ -147,6 +147,14 @@ class PlatformOnboardingTests(TenantFixture):
         self.assertNotContains(response, invitation.token_hash)
         self.assertContains(response, "/invitations/")
 
+    def test_workspace_currency_is_stored_in_capitals(self):
+        self.client.force_login(self.platform_admin)
+        self.client.post(reverse("platform_organisation_create"), {
+            "name": "Delta Growers", "slug": "delta", "currency": " ghs ", "status": Organisation.Status.ACTIVE,
+            "admin_email": "admin@delta.test", "admin_first_name": "Dora", "admin_last_name": "A",
+        })
+        self.assertEqual(Organisation.objects.get(slug="delta").currency, "GHS")
+
 class InvitationSecurityTests(TenantFixture):
     def test_invitation_token_is_hashed_and_single_use(self):
         invitation, token = StaffInvitation.issue(organisation=self.alpha, email="invitee@alpha.test", role=OrganisationMembership.Role.FIELD_OFFICER, invited_by=self.alpha_admin)

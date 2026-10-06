@@ -20,6 +20,8 @@ class PlatformOrganisationForm(forms.ModelForm):
     class Meta:
         model = Organisation
         fields = ["name", "slug", "currency", "status"]
+    def clean_currency(self):
+        return (self.cleaned_data.get("currency") or "").strip().upper()
     def clean_admin_email(self):
         value = self.cleaned_data["admin_email"].strip().lower()
         if User.objects.filter(email=value).exists(): raise forms.ValidationError("A user with this email already exists.")

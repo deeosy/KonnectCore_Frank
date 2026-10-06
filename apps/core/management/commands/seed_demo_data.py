@@ -9,7 +9,7 @@ from django.utils import timezone
 from apps.collections.models import CollectionRecord
 from apps.farms.models import Crop, Farm, FarmCropSeason
 from apps.field.models import FieldVisit
-from apps.finance.models import FinancialRecord
+from apps.finance.models import FinancialRecord, PaymentAllocation
 from apps.groups.models import GroupMemberAssignment, StructureUnit
 from apps.members.models import Member, MemberHistory
 from apps.organisations.models import Organisation, OrganisationMembership
@@ -135,13 +135,14 @@ class Command(BaseCommand):
             )
 
         active_members = [m for m in members.values() if m.status == Member.Status.ACTIVE]
+        collections = []
         for i in range(34):
             member = active_members[i % len(active_members)]
             crop = list(crops.values())[i % len(crops)]
             date = today - timedelta(days=i * 3 + 1)
             quantity = Decimal(320 + (i % 8) * 65)
             price = {"Maize": Decimal("4.20"), "Cocoa": Decimal("18.50"), "Cassava": Decimal("2.75"), "Soybean": Decimal("7.80")}[crop.name]
-            CollectionRecord.objects.get_or_create(
+            collection, _ = CollectionRecord.objects.get_or_create(
                 organisation=org, notes=f"Demo collection record {i + 1:03d}.",
                 defaults={
                     "member": member, "crop": crop, "collection_date": date,
@@ -152,6 +153,7 @@ class Command(BaseCommand):
                     "recorded_by": officer_north.user if i % 2 == 0 else officer_south.user,
                 },
             )
+            collections.append(collection)
 
         statuses = [FinancialRecord.Status.PAID, FinancialRecord.Status.PAID, FinancialRecord.Status.PART_PAID, FinancialRecord.Status.PENDING]
         methods = [FinancialRecord.Method.MOBILE_MONEY, FinancialRecord.Method.CASH, FinancialRecord.Method.BANK_TRANSFER]
@@ -162,15 +164,22 @@ class Command(BaseCommand):
             amount = Decimal(180 + (i % 6) * 75)
             paid = amount if status == FinancialRecord.Status.PAID else (amount / 2 if status == FinancialRecord.Status.PART_PAID else Decimal("0"))
             ref = f"DEMO-FIN-{i + 1:03d}"
-            FinancialRecord.objects.get_or_create(
+            record, _ = FinancialRecord.objects.get_or_create(
                 organisation=org, reference_number=ref,
                 defaults={
                     "record_type": record_type, "member": member, "amount": amount,
                     "paid_amount": paid, "payment_method": methods[i % len(methods)],
                     "status": status, "payment_date": today - timedelta(days=i * 4 + 2),
                     "notes": "Validation dataset transaction.", "recorded_by": manager.user,
+                    "purpose": FinancialRecord.Purpose.COLLECTIONS if record_type == FinancialRecord.Type.MEMBER_PAYMENT else "",
                 },
             )
+            # Demo payments to members settle a collection of the same member, so they show as allocated.
+            if (record.record_type == FinancialRecord.Type.MEMBER_PAYMENT and record.purpose == FinancialRecord.Purpose.COLLECTIONS
+                    and record.paid_amount > 0 and not record.allocations.filter(removed_at__isnull=True).exists()):
+                allocation = PaymentAllocation(organisation=org, payment=record, collection=collections[i], amount=record.paid_amount, created_by=manager.user)
+                allocation.full_clean()
+                allocation.save()
         for i, (note, amount) in enumerate([("Transport for field monitoring", 680), ("Collection centre supplies", 1240), ("Farmer training materials", 950)]):
             FinancialRecord.objects.get_or_create(
                 organisation=org, reference_number=f"DEMO-EXP-{i + 1:03d}",
