@@ -1,2 +1,33 @@
 {% extends "base.html" %}{% block title %}{{ title }}{% endblock %}{% block header_title %}Payments & Dues{% endblock %}
-{% block content %}<div class="form-card wide"><p class="eyebrow">Payments and dues</p><h1>{{ title }}</h1><form method="post" class="stack form-grid" novalidate>{% csrf_token %}{{ form.as_p }}<div class="form-actions"><a href="{% url 'finance_list' %}">Cancel</a><button class="button">Save</button></div></form></div>{% endblock %}
+{% block content %}<div class="form-card wide"><p class="eyebrow">Payments and dues</p><h1>{{ title }}</h1><form method="post" class="stack form-grid" novalidate id="finance-form">{% csrf_token %}{{ form.as_p }}<div class="form-actions"><a href="{% url 'finance_list' %}">Cancel</a><button class="button">Save</button></div></form></div>
+{% if not record %}<script>
+/* Show allocation rows as soon as a member is chosen, without saving. Entered values are kept. */
+(function () {
+  var form = document.getElementById("finance-form");
+  if (!form || !window.fetch || !window.DOMParser) { return; }
+  var base = "{% url 'finance_create' %}";
+  function val(name) { var el = form.elements[name]; return el ? el.value : ""; }
+  function refresh() {
+    var params = new URLSearchParams();
+    ["record_type", "member", "purpose"].forEach(function (n) { if (val(n)) { params.set(n, val(n)); } });
+    fetch(base + "?" + params.toString(), {credentials: "same-origin"}).then(function (r) { return r.ok ? r.text() : null; }).then(function (html) {
+      if (!html) { return; }
+      var fresh = new DOMParser().parseFromString(html, "text/html").getElementById("finance-form");
+      if (!fresh) { return; }
+      // Remember typed values, swap in the fresh form, then restore them on the live elements.
+      var kept = {};
+      Array.prototype.forEach.call(form.elements, function (old) {
+        if (old.name && old.name.indexOf("alloc_") !== 0 && old.type !== "submit") { kept[old.name] = old.value; }
+      });
+      form.innerHTML = fresh.innerHTML;
+      Object.keys(kept).forEach(function (name) {
+        var el = form.elements[name];
+        if (el && el.type !== "submit" && !(window.RadioNodeList && el instanceof RadioNodeList)) { el.value = kept[name]; }
+      });
+      bind();
+    }).catch(function () {});
+  }
+  function bind() { var m = form.elements["member"]; if (m) { m.addEventListener("change", refresh); } }
+  bind();
+})();
+</script>{% endif %}{% endblock %}

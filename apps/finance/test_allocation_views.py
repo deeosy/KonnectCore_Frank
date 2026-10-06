@@ -198,3 +198,42 @@ class PaymentAllocationViewTests(TestCase):
         self.assertEqual(pay["Unallocated paid balance"], "150.00")
         due = rows["QA-DUE"]
         self.assertEqual((due["Purpose"], due["Allocated to collections"], due["Unallocated paid balance"]), ("", "", ""))
+
+
+class AllocationRowsOnFirstLoadTests(TestCase):
+    """Allocation rows must appear before any Save, not only after a rejected first Save."""
+    setUp = PaymentAllocationViewTests.setUp
+    collection = PaymentAllocationViewTests.collection
+
+    def url(self, **params):
+        from urllib.parse import urlencode
+        return reverse("finance_create") + ("?" + urlencode(params) if params else "")
+
+    def test_rows_shown_when_member_and_purpose_are_in_url(self):
+        response = self.client.get(self.url(record_type="member_payment", member=str(self.member.pk), purpose=FinancialRecord.Purpose.COLLECTIONS))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f'name="alloc_{self.c1.pk}"')
+        self.assertContains(response, f'name="alloc_{self.c2.pk}"')
+        form = response.context["form"]
+        self.assertFalse(form.is_bound)
+        self.assertEqual(str(form["member"].value()), str(self.member.pk))
+        self.assertEqual(form["purpose"].value(), FinancialRecord.Purpose.COLLECTIONS)
+        self.assertFalse(FinancialRecord.objects.exists())
+
+    def test_no_rows_without_member(self):
+        response = self.client.get(self.url())
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'name="alloc_')
+
+    def test_invalid_member_value_is_ignored(self):
+        response = self.client.get(self.url(member="not-a-uuid", purpose=FinancialRecord.Purpose.COLLECTIONS))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'name="alloc_')
+
+    def test_member_from_another_organisation_shows_no_rows(self):
+        other = Organisation.objects.create(name="Other Org", slug="other-pay-org")
+        foreign = Member.objects.create(organisation=other, created_by=self.manager, updated_by=self.manager, membership_number="X1", first_name="Xena", last_name="Other")
+        response = self.client.get(self.url(record_type="member_payment", member=str(foreign.pk), purpose=FinancialRecord.Purpose.COLLECTIONS))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'name="alloc_')
+        self.assertNotContains(response, "Xena")

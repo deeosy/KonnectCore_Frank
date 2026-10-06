@@ -23,7 +23,13 @@ def finance_detail(request,record_id):
     return render(request,"finance/detail.html",{"record":item})
 @manager_or_admin_required
 def finance_create(request):
-    form=FinancialRecordForm(request.POST or None,organisation=request.organisation,recorded_by=request.user)
+    # GET may pre-fill record type, member and purpose (e.g. from a member or collection page) so allocation rows show on first load.
+    initial={}
+    if request.method!="POST":
+        if request.GET.get("record_type") in FinancialRecord.Type.values: initial["record_type"]=request.GET["record_type"]
+        if request.GET.get("purpose") in FinancialRecord.Purpose.values: initial["purpose"]=request.GET["purpose"]
+        if request.GET.get("member"): initial["member"]=request.GET["member"].strip()
+    form=FinancialRecordForm(request.POST or None,initial=initial,organisation=request.organisation,recorded_by=request.user)
     if request.method=="POST" and form.is_valid():
         try:
             item,created=save_payment_with_allocations(form,actor=request.user)
