@@ -1,6 +1,7 @@
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
@@ -69,3 +70,30 @@ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = True
 X_FRAME_OPTIONS = "DENY"
+CSRF_TRUSTED_ORIGINS = [x.strip() for x in os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",") if x.strip()]
+
+# Production hardening. Enabled only when DJANGO_SECURE=true (set on the hosted server),
+# so local development and the test suite are unaffected.
+SECURE_DEPLOYMENT = os.getenv("DJANGO_SECURE", "false").lower() == "true"
+if SECURE_DEPLOYMENT:
+    if DEBUG:
+        raise ImproperlyConfigured("DJANGO_DEBUG must be false when DJANGO_SECURE=true.")
+    if SECRET_KEY == "dev-only-change-me" or len(SECRET_KEY) < 50:
+        raise ImproperlyConfigured("Set a strong DJANGO_SECRET_KEY (50+ characters) when DJANGO_SECURE=true.")
+    if not CSRF_TRUSTED_ORIGINS:
+        raise ImproperlyConfigured("Set DJANGO_CSRF_TRUSTED_ORIGINS (for example https://example.com) when DJANGO_SECURE=true.")
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = int(os.getenv("DJANGO_HSTS_SECONDS", "3600"))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+    SECURE_HSTS_PRELOAD = False
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_REFERRER_POLICY = "same-origin"
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {"console": {"class": "logging.StreamHandler"}},
+    "root": {"handlers": ["console"], "level": os.getenv("DJANGO_LOG_LEVEL", "WARNING")},
+}

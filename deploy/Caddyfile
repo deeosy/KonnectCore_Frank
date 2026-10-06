@@ -1,0 +1,33 @@
+# Caddy reverse proxy for the hosted KonnectCore server.
+# KC_DOMAIN comes from the server .env (for example konnectcore.tech).
+# Caddy obtains and renews the HTTPS certificate automatically.
+
+www.{$KC_DOMAIN} {
+	redir https://{$KC_DOMAIN}{uri} permanent
+}
+
+{$KC_DOMAIN} {
+	encode zstd gzip
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy same-origin
+		-Server
+	}
+
+	# Collected static files only. Uploaded files (media) are never served
+	# here; the app serves them through permission-checked views.
+	handle_path /static/* {
+		root * /srv/static
+		file_server
+	}
+
+	handle {
+		reverse_proxy web:8000
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}

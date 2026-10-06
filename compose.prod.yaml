@@ -1,0 +1,65 @@
+# Production stack for the hosted KonnectCore server.
+# Usage on the server: docker compose -f compose.prod.yaml up -d --build
+# Requires a server-only .env (never committed) with DJANGO_SECRET_KEY,
+# POSTGRES_PASSWORD, DJANGO_ALLOWED_HOSTS, DJANGO_CSRF_TRUSTED_ORIGINS and KC_DOMAIN.
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-konnectcore}
+      POSTGRES_USER: ${POSTGRES_USER:-konnectcore}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the server .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-konnectcore} -d ${POSTGRES_DB:-konnectcore}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    restart: unless-stopped
+    env_file: [.env]
+    environment:
+      POSTGRES_HOST: db
+      DJANGO_DEBUG: "false"
+      DJANGO_SECURE: "true"
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py collectstatic --noinput &&
+             exec gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 60 --access-logfile - --error-logfile -"
+    volumes:
+      - media_data:/app/media
+      - static_data:/app/staticfiles
+    expose: ["8000"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      KC_DOMAIN: ${KC_DOMAIN:?Set KC_DOMAIN in the server .env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - static_data:/srv/static:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+
+volumes:
+  postgres_data:
+  media_data:
+  static_data:
+  caddy_data:
+  caddy_config:
