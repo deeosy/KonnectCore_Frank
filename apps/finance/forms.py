@@ -50,6 +50,11 @@ class FinancialRecordForm(forms.ModelForm):
             del self.fields["allocation_change_reason"]
         self.fields["member"].queryset = Member.objects.for_organisation(organisation)
         self.fields["purpose"].required = False
+        self._apply_choice_prompts()
+        self.fields["paid_amount"].required = False
+        if adding and not self.is_bound and not self.initial.get("paid_amount"):
+            # Start empty so a misleading 0 is not left unchanged; a blank value still saves as 0 (UI review item 4).
+            self.initial["paid_amount"] = None
         self._previous = {} if adding else active_allocations(self.instance)
         # An exact repeat of an already-saved create form (double click) must validate like the
         # original, so the original payment's allocations are not counted against availability.
@@ -105,6 +110,29 @@ class FinancialRecordForm(forms.ModelForm):
 
     def allocation_fields(self):
         return [self[name] for name in self.allocation_collections]
+
+    PROMPTS = {
+        "member": "Choose a member",
+        "record_type": "Choose a record type",
+        "payment_method": "Choose a payment method",
+        "purpose": "Choose a purpose",
+    }
+
+    def _apply_choice_prompts(self):
+        """Replace Django's '---------' blank choices with plain prompts."""
+        for name, prompt in self.PROMPTS.items():
+            field = self.fields.get(name)
+            if field is None:
+                continue
+            if hasattr(field, "empty_label"):
+                if field.empty_label is not None:
+                    field.empty_label = prompt
+            else:
+                field.choices = [("", prompt) if value == "" else (value, label) for value, label in field.choices]
+
+    def clean_paid_amount(self):
+        value = self.cleaned_data.get("paid_amount")
+        return ZERO if value is None else value
 
     def clean(self):
         data = super().clean()

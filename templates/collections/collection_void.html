@@ -1,11 +1,11 @@
-{% extends "base.html" %}
+{% extends "base.html" %}{% load money %}
 {% block title %}Void collection{% endblock %}
 {% block header_title %}Void collection{% endblock %}
 {% block content %}
 <div class="form-card wide">
   <p class="eyebrow"><a href="{% url 'collection_detail' record.id %}">Collection details</a></p>
   <h1>Void collection</h1>
-  <p class="muted">{{ record.crop.display_name }} - {{ record.quantity }} {{ record.get_quantity_unit_display }} from {{ record.member.full_name }} ({{ record.member.membership_number }}) on {{ record.collection_date|date:"Y-m-d" }}. Value {{ active_organisation.currency }} {{ record.total_value }}.</p>
+  <p class="muted">{{ record.crop.display_name }} - {{ record.quantity }} {{ record.get_quantity_unit_display }} from {{ record.member.full_name }} ({{ record.member.membership_number }}) on {{ record.collection_date|date:"Y-m-d" }}. Value {{ record.total_value|money:active_organisation.currency }}.</p>
   <p>A voided collection is excluded from totals, reports and exports. It stays visible here, marked as voided, with who voided it and why. Voiding cannot be undone in the app.</p>
 
   {% if blockers %}
@@ -14,7 +14,7 @@
       <p>Payments are allocated to this collection. Move the allocation to the correct collection or remove it, then void. Do not cancel a genuine payment to allow a void.</p>
       <ul>
         {% for allocation in blockers %}
-          <li><a href="{% url 'finance_detail' allocation.payment.id %}">{{ allocation.payment.get_record_type_display }} on {{ allocation.payment.payment_date|date:"Y-m-d" }}</a> - {{ active_organisation.currency }} {{ allocation.amount }} allocated</li>
+          <li><a href="{% url 'finance_detail' allocation.payment.id %}">{{ allocation.payment.get_record_type_display }} on {{ allocation.payment.payment_date|date:"Y-m-d" }}</a> - {{ allocation.amount|money:active_organisation.currency }} allocated</li>
         {% endfor %}
       </ul>
     </div>
@@ -26,7 +26,7 @@
         <p class="muted">This member has payments with no recorded purpose. They may or may not be for this collection. Review them before voiding. If one is for this collection, link it first.</p>
         <ul>
           {% for payment in unresolved_payments %}
-            <li><a href="{% url 'finance_detail' payment.id %}">{{ payment.payment_date|date:"Y-m-d" }}</a> - paid {{ active_organisation.currency }} {{ payment.paid_amount }} of {{ active_organisation.currency }} {{ payment.amount }} - {{ payment.get_status_display }}{% if payment.reference_number %} - ref {{ payment.reference_number }}{% endif %}</li>
+            <li><a href="{% url 'finance_detail' payment.id %}">{{ payment.payment_date|date:"Y-m-d" }}</a> - paid {{ payment.paid_amount|money:active_organisation.currency }} of {{ payment.amount|money:active_organisation.currency }} - {{ payment.get_status_display }}{% if payment.reference_number %} - ref {{ payment.reference_number }}{% endif %}</li>
           {% endfor %}
         </ul>
       </section>

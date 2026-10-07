@@ -95,7 +95,7 @@ class FinancialMetricTests(TestCase):
     def test_recent_payments_show_amount_actually_paid(self):
         self.login()
         response = self.client.get(reverse("dashboard"))
-        self.assertContains(response, "GHS 400.00 paid of GHS 1000.00")
+        self.assertContains(response, "GHS\u00a0400.00 paid of GHS\u00a01,000.00")
 
     def test_finance_export_matches_dashboard_by_direction(self):
         self.login()

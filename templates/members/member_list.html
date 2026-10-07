@@ -14,8 +14,8 @@
   <button class="button">Filter</button>
   {% if query or selected_status %}<a href="{% url 'member_list' %}">Clear</a>{% endif %}
 </form>
-<div class="table-wrap"><table><thead><tr><th>Member</th><th>Membership no.</th><th>Phone</th><th>Location</th><th>Status</th></tr></thead><tbody>
-{% for member in members %}<tr><td><a href="{% url 'member_detail' member.id %}"><strong>{{ member.full_name }}</strong></a></td><td>{{ member.membership_number }}</td><td>{{ member.phone|default:"—" }}</td><td>{{ member.location|default:"—" }}</td><td><span class="status status-{{ member.status }}">{{ member.get_status_display }}</span></td></tr>
+<div class="table-wrap responsive"><table><thead><tr><th>Member</th><th>Membership no.</th><th>Phone</th><th>Location</th><th>Status</th></tr></thead><tbody>
+{% for member in members %}<tr><td data-label="Member"><a class="row-link" href="{% url 'member_detail' member.id %}"><strong>{{ member.full_name }}</strong></a></td><td data-label="Membership no.">{{ member.membership_number }}</td><td data-label="Phone">{{ member.phone|default:"—" }}</td><td data-label="Location">{{ member.location|default:"—" }}</td><td data-label="Status"><span class="status status-{{ member.status }}">{{ member.get_status_display }}</span></td></tr>
 {% empty %}<tr><td colspan="5">No members match this search.</td></tr>{% endfor %}
 </tbody></table></div>
 {% endblock %}
