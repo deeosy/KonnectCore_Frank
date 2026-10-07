@@ -46,7 +46,7 @@ def farm_create(request):
         farm = form.save()
         messages.success(request, "Farm profile created.")
         return redirect("farm_detail", farm_id=farm.pk)
-    return render(request, "farms/model_form.html", {"form": form, "title": "Register farm", "cancel_url": "farm_list"})
+    return render(request, "farms/model_form.html", {"form": form, "title": "Add farm", "cancel_url": "farm_list"})
 
 
 @manager_or_admin_required
@@ -85,6 +85,16 @@ def crop_edit(request, crop_id):
         messages.success(request, "Crop updated.")
         return redirect("crop_list")
     return render(request, "farms/model_form.html", {"form": form, "title": "Edit crop", "cancel_url": "crop_list"})
+
+
+@manager_or_admin_required
+def season_pick_farm(request):
+    """Add Crop quick action: choose the farm, then record a crop season on it."""
+    farms = Farm.objects.for_organisation(request.organisation).select_related("member").order_by("member__first_name", "member__last_name", "name")
+    query = request.GET.get("q", "").strip()
+    if query:
+        farms = farms.filter(Q(name__icontains=query) | Q(location__icontains=query) | Q(member__first_name__icontains=query) | Q(member__last_name__icontains=query) | Q(member__membership_number__icontains=query))
+    return render(request, "farms/season_pick_farm.html", {"farms": farms, "query": query})
 
 
 @manager_or_admin_required

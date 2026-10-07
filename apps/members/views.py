@@ -84,9 +84,9 @@ def member_create(request):
         member = save_member_form(form, organisation=request.organisation, actor=request.user, creating=True)
         if member is not None:
             record_history(member, MemberHistory.Action.CREATED, request.user, {"member": member_snapshot(member)})
-            messages.success(request, "Member registered.")
+            messages.success(request, "Member added.")
             return redirect("member_detail", member_id=member.pk)
-    return render(request, "members/member_form.html", {"form": form, "title": "Register member"})
+    return render(request, "members/member_form.html", {"form": form, "title": "Add member"})
 
 
 @manager_or_admin_required

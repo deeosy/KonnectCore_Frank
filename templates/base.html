@@ -3,7 +3,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0f5132">
   <title>{% block title %}KonnectCore{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
@@ -29,10 +29,10 @@
         {% else %}
         <a class="nav-item {% if request.resolver_match.url_name == 'dashboard' or request.resolver_match.url_name == 'workspace' %}active{% endif %}" href="{% url 'dashboard' %}"><span class="nav-icon">{% include "includes/icon.html" with name="dashboard" %}</span>Dashboard</a>
         <a class="nav-item {% if 'member' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'member_list' %}"><span class="nav-icon">{% include "includes/icon.html" with name="members" %}</span>Members</a>
-        <a class="nav-item {% if 'structure' in request.resolver_match.url_name or 'assignment' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'structure_list' %}"><span class="nav-icon">{% include "includes/icon.html" with name="groups" %}</span>Groups</a>
-        <a class="nav-item {% if 'farm' in request.resolver_match.url_name or 'crop' in request.resolver_match.url_name or 'season' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'farm_list' %}"><span class="nav-icon">{% include "includes/icon.html" with name="farms" %}</span>Farms &amp; Crops</a>
         <a class="nav-item {% if 'collection' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'collection_list' %}"><span class="nav-icon">{% include "includes/icon.html" with name="collections" %}</span>Collections</a>
         <a class="nav-item {% if 'finance' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'finance_list' %}"><span class="nav-icon">{% include "includes/icon.html" with name="payments" %}</span>Payments &amp; Dues</a>
+        <a class="nav-item {% if 'farm' in request.resolver_match.url_name or 'crop' in request.resolver_match.url_name or 'season' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'farm_list' %}"><span class="nav-icon">{% include "includes/icon.html" with name="farms" %}</span>Farms &amp; Crops</a>
+        <a class="nav-item {% if 'structure' in request.resolver_match.url_name or 'assignment' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'structure_list' %}"><span class="nav-icon">{% include "includes/icon.html" with name="groups" %}</span>Groups</a>
         <a class="nav-item {% if 'field_' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'field_home' %}"><span class="nav-icon">{% include "includes/icon.html" with name="field" %}</span>Field Workspace</a>
         <a class="nav-item {% if 'report' in request.resolver_match.url_name and request.resolver_match.url_name != 'dashboard' %}active{% endif %}" href="{% url 'reports_home' %}"><span class="nav-icon">{% include "includes/icon.html" with name="reports" %}</span>Reports</a>
         {% endif %}
@@ -46,12 +46,13 @@
     <label class="nav-overlay" for="nav-toggle" aria-hidden="true"></label>
     <div class="app-main">
       <header class="app-topbar"><label class="menu-button" for="nav-toggle" aria-label="Open navigation">{% include "includes/icon.html" with name="menu" %}</label><div class="topbar-context"><small>{% if user.is_superuser %}KonnectCore Platform{% else %}{{ active_organisation.name }}{% endif %}</small><strong>{% block header_title %}Workspace{% endblock %}</strong></div><div class="topbar-user"><span class="user-avatar">{% if user.first_name %}{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}{% else %}{{ user.email|first|upper }}{% endif %}</span><span><strong>{{ user.get_full_name|default:user.email }}</strong><small>{% if user.is_superuser %}Super Admin{% elif active_membership %}{{ active_membership.get_role_display }}{% endif %}</small></span></div></header>
-      <main class="content"><div class="content-inner">{% for message in messages %}<div class="message" role="status"><span>✓</span>{{ message }}</div>{% endfor %}{% block content %}{% endblock %}</div></main>
+      <main class="content"><div class="content-inner">{% for message in messages %}<div class="message" role="status"><span>✓</span>{{ message }}</div>{% endfor %}{% block content %}{% endblock %}</div></main>{% include "includes/quick_actions.html" %}
     </div>
   </div>
 {% else %}
   <main class="public-shell"><a class="public-brand" href="/"><span class="brand-mark">K</span><strong>KonnectCore</strong></a>{% for message in messages %}<div class="message" role="status">{{ message }}</div>{% endfor %}{% block public_content %}{% block content_public %}{% endblock %}{% endblock %}</main>
 {% endif %}
+<script src="{% static 'js/farm_location.js' %}" nonce="{{ request.csp_nonce }}" defer></script>
 <script nonce="{{ request.csp_nonce }}">
 /* Prevent double submission of POST forms (UAT I-2). Server-side submission keys remain the real guarantee. */
 (function () {

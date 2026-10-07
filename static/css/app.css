@@ -41,3 +41,16 @@ th.num,td.num{text-align:right}
 @media(max-width:900px){.nav-close,.menu-button{display:grid;place-items:center;padding:0;border-radius:8px}}
 .link-quiet{display:inline-flex;align-items:center;min-height:44px;padding:0 6px;color:var(--muted);font-size:14px;font-weight:600;text-decoration:underline;text-underline-offset:3px}
 .link-quiet:hover,.link-quiet:focus-visible{color:var(--danger)}
+/* Mobile quick-action bar (Kennedy feedback p.7). Below 900px; the sidebar drawer stays available. */
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.quick-actions{display:none}
+@media(max-width:900px){
+.quick-actions{position:fixed;left:0;right:0;bottom:0;z-index:20;display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;padding:6px 8px calc(6px + env(safe-area-inset-bottom));background:#f4f8f2;border-top:1px solid var(--line);box-shadow:0 -4px 16px rgba(8,47,35,.08)}
+.qa-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:52px;padding:4px 2px;border-radius:10px;color:var(--green-800);font-size:12px;font-weight:600;line-height:1.15;text-align:center;text-decoration:none}
+.qa-item:hover,.qa-item:focus-visible{background:var(--green-100)}
+.qa-item.active{color:#fff;background:var(--green-800)}
+.qa-item:active{transform:scale(.97)}
+.is-authenticated .content-inner{padding-bottom:calc(96px + env(safe-area-inset-bottom))}
+.nav-toggle:checked~.app-shell .quick-actions{display:none}
+}
+.location-finder{display:flex;flex-wrap:wrap;align-items:center;gap:10px}

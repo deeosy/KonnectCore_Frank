@@ -43,8 +43,8 @@ def register_member(request):
  if request.method=='POST' and form.is_valid():
   x=save_member_form(form,organisation=request.organisation,actor=request.user,creating=True)
   if x is not None:
-   record_history(x,MemberHistory.Action.CREATED,request.user,{"member":member_snapshot(x)});messages.success(request,f'{x.full_name} is registered and awaiting assignment. The member will appear in your list once an Admin or Manager adds them to one of your groups.');return redirect('field_home')
- return render(request,'field/form.html',{'form':form,'title':'Register member'})
+   record_history(x,MemberHistory.Action.CREATED,request.user,{"member":member_snapshot(x)});messages.success(request,f'{x.full_name} has been added and is awaiting assignment. The member will appear in your list once an Admin or Manager adds them to one of your groups.');return redirect('field_home')
+ return render(request,'field/form.html',{'form':form,'title':'Add member'})
 @field_only
 def member_detail(request,member_id):
  """Read-only member page limited to the officer's assigned members (404 otherwise)."""

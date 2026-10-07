@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Add crop · {{ active_organisation.name }}{% endblock %}
+{% block header_title %}Add Crop{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><p class="eyebrow">Farms &amp; Crops</p><h1>Add crop</h1><p class="muted">Choose the farm, then record the crop grown there this season.</p></div>
+  <div class="actions"><a class="button secondary" href="{% url 'farm_create' %}">Add farm</a></div>
+</div>
+<form method="get" class="filter-bar">
+  <label><span>Search</span><input type="search" name="q" value="{{ query }}" placeholder="Member or farm"></label>
+  <button class="button">Search</button>
+  {% if query %}<a href="{% url 'season_pick_farm' %}">Clear</a>{% endif %}
+</form>
+<div class="table-wrap responsive"><table><thead><tr><th>Member</th><th>Farm</th><th>Location</th><th><span class="sr-only">Action</span></th></tr></thead><tbody>
+{% for farm in farms %}<tr><td data-label="Member"><strong>{{ farm.member.full_name }}</strong><br><span class="muted small">{{ farm.member.membership_number }}</span></td><td data-label="Farm">{{ farm.name }}</td><td data-label="Location">{{ farm.location|default:"—" }}</td><td data-label=""><a class="button" href="{% url 'season_create' farm.id %}">Add crop</a></td></tr>
+{% empty %}<tr><td colspan="4">{% if query %}No farms match this search.{% else %}No farms yet. Add a farm for a member first.{% endif %}</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}
