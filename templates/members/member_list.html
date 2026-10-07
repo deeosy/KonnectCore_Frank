@@ -9,7 +9,7 @@
   {% endif %}
 </div>
 <form method="get" class="filter-bar">
-  <label><span>Search</span><input type="search" name="q" value="{{ query }}" placeholder="Name, number, phone, ID or location"></label>
+  <label><span>Search</span><input type="search" name="q" value="{{ query }}" placeholder="Name, number, phone"></label>
   <label><span>Status</span><select name="status"><option value="">All statuses</option>{% for value,label in statuses %}<option value="{{ value }}"{% if selected_status == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
   <button class="button">Filter</button>
   {% if query or selected_status %}<a href="{% url 'member_list' %}">Clear</a>{% endif %}

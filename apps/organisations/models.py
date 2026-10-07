@@ -48,3 +48,4 @@ class OrganisationOwnedModel(models.Model):
         abstract = True
 
 from .invitations import StaffInvitation  # noqa: E402,F401
+from .password_resets import StaffPasswordReset  # noqa: E402,F401

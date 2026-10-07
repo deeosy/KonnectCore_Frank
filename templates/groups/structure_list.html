@@ -7,7 +7,7 @@
   {% if active_membership.role == "admin" or active_membership.role == "manager" %}<a class="button" href="{% url 'structure_create' %}">Create unit</a>{% endif %}
 </div>
 <form method="get" class="filter-bar">
-  <label><span>Search</span><input type="search" name="q" value="{{ query }}" placeholder="Unit, parent or leader"></label>
+  <label><span>Search</span><input type="search" name="q" value="{{ query }}" placeholder="Unit or leader"></label>
   <label><span>Type</span><select name="type"><option value="">All types</option>{% for value,label in unit_types %}<option value="{{ value }}"{% if selected_type == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
   <button class="button">Filter</button>{% if query or selected_type %}<a href="{% url 'structure_list' %}">Clear</a>{% endif %}
 </form>

@@ -10,6 +10,12 @@ from .forms import AcceptInvitationForm, LoginForm, PlatformOrganisationForm, Pl
 from .invitations import StaffInvitation
 from django.views.decorators.http import require_POST
 from .middleware import ActiveOrganisationMiddleware
+from .password_resets import StaffPasswordReset
+from django.contrib.auth.forms import SetPasswordForm
+from django.db import transaction
+from django.http import Http404
+from django.urls import reverse
+from django.views.decorators.cache import never_cache
 from .models import Organisation, OrganisationMembership
 
 
@@ -97,6 +103,40 @@ def staff_invitation_cancel(request, invitation_id):
     invitation.save(update_fields=["cancelled_at", "cancelled_by"])
     messages.success(request, f"Invitation for {invitation.email} cancelled. The link no longer works.")
     return redirect("staff_list")
+
+@admin_required
+@require_POST
+def staff_password_reset(request, membership_id):
+    # The app sends no email: an Admin issues a one-time link and shares it by WhatsApp.
+    # Only staff who belong to this organisation alone can be reset, and never a Super Admin,
+    # so one organisation's Admin can't take over an account used elsewhere.
+    membership = get_object_or_404(OrganisationMembership.objects.select_related("user"), pk=membership_id, organisation=request.organisation)
+    staff_user = membership.user
+    if staff_user.is_superuser or OrganisationMembership.objects.filter(user=staff_user).exclude(organisation=request.organisation).exists():
+        raise PermissionDenied("This account can't be reset from this organisation.")
+    _, token = StaffPasswordReset.issue(organisation=request.organisation, user=staff_user, issued_by=request.user)
+    reset_url = request.build_absolute_uri(reverse("password_reset_accept", args=[token]))
+    return render(request, "organisations/password_reset_issued.html", {"staff_user": staff_user, "reset_url": reset_url})
+
+@never_cache
+def password_reset_accept(request, token):
+    digest = StaffPasswordReset.digest(token)
+    reset = StaffPasswordReset.valid().filter(token_hash=digest).first()
+    if reset is None:
+        raise Http404("Reset link is invalid, used or expired.")
+    form = SetPasswordForm(reset.user, request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        with transaction.atomic():
+            # Lock the link so two submissions can't both use it.
+            locked = StaffPasswordReset.valid().select_for_update(of=("self",)).filter(pk=reset.pk).first()
+            if locked is None:
+                raise Http404("Reset link is invalid, used or expired.")
+            form.save()  # Changing the password ends the user's other signed-in sessions.
+            locked.used_at = timezone.now()
+            locked.save(update_fields=["used_at"])
+        messages.success(request, "Password changed. Sign in with your new password.")
+        return redirect("login")
+    return render(request, "organisations/password_reset_accept.html", {"form": form, "reset": reset})
 
 def accept_invitation(request, token):
     invitation = get_object_or_404(StaffInvitation.objects.select_related("organisation"), token_hash=StaffInvitation.digest(token))

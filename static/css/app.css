@@ -32,3 +32,12 @@ th.num,td.num{text-align:right}
 .table-wrap.responsive td[colspan]::before{content:none}
 .table-wrap.responsive td form .button{min-height:44px}
 }
+/* UI review "Later" items (7 Oct 2026): SVG icons, 44px tap areas, quiet secondary link. */
+.icon{display:block;flex:0 0 auto}
+.nav-icon .icon{width:18px;height:18px}
+.icon-button,.menu-button,.nav-close{min-width:44px;min-height:44px;box-sizing:border-box}
+.icon-button{display:inline-grid;place-items:center;border-radius:8px}
+.icon-button:hover,.icon-button:focus-visible{color:#fff;background:rgba(255,255,255,.08)}
+@media(max-width:900px){.nav-close,.menu-button{display:grid;place-items:center;padding:0;border-radius:8px}}
+.link-quiet{display:inline-flex;align-items:center;min-height:44px;padding:0 6px;color:var(--muted);font-size:14px;font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.link-quiet:hover,.link-quiet:focus-visible{color:var(--danger)}

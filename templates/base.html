@@ -18,34 +18,34 @@
           <span class="brand-mark" aria-hidden="true">K</span>
           <span><strong>KonnectCore</strong><small>Organisation OS</small></span>
         </a>
-        <label class="nav-close" for="nav-toggle" aria-label="Close navigation">×</label>
+        <label class="nav-close" for="nav-toggle" aria-label="Close navigation">{% include "includes/icon.html" with name="close" %}</label>
       </div>
       {% if active_organisation %}
       <div class="workspace-chip"><span class="workspace-avatar">{{ active_organisation.name|first|upper }}</span><span><small>Workspace</small><strong>{{ active_organisation.name }}</strong></span></div>
       <nav class="sidebar-nav">
         <p class="nav-label">Workspace</p>
         {% if active_membership.role == 'field_officer' %}
-        <a class="nav-item active" href="{% url 'field_home' %}"><span class="nav-icon">◎</span>Field Workspace</a>
+        <a class="nav-item active" href="{% url 'field_home' %}"><span class="nav-icon">{% include "includes/icon.html" with name="field" %}</span>Field Workspace</a>
         {% else %}
-        <a class="nav-item {% if request.resolver_match.url_name == 'dashboard' or request.resolver_match.url_name == 'workspace' %}active{% endif %}" href="{% url 'dashboard' %}"><span class="nav-icon">▦</span>Dashboard</a>
-        <a class="nav-item {% if 'member' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'member_list' %}"><span class="nav-icon">◎</span>Members</a>
-        <a class="nav-item {% if 'structure' in request.resolver_match.url_name or 'assignment' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'structure_list' %}"><span class="nav-icon">⌘</span>Groups</a>
-        <a class="nav-item {% if 'farm' in request.resolver_match.url_name or 'crop' in request.resolver_match.url_name or 'season' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'farm_list' %}"><span class="nav-icon">◇</span>Farms &amp; Crops</a>
-        <a class="nav-item {% if 'collection' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'collection_list' %}"><span class="nav-icon">⇣</span>Collections</a>
-        <a class="nav-item {% if 'finance' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'finance_list' %}"><span class="nav-icon">¤</span>Payments &amp; Dues</a>
-        <a class="nav-item {% if 'field_' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'field_home' %}"><span class="nav-icon">⌖</span>Field Workspace</a>
-        <a class="nav-item {% if 'report' in request.resolver_match.url_name and request.resolver_match.url_name != 'dashboard' %}active{% endif %}" href="{% url 'reports_home' %}"><span class="nav-icon">≡</span>Reports</a>
+        <a class="nav-item {% if request.resolver_match.url_name == 'dashboard' or request.resolver_match.url_name == 'workspace' %}active{% endif %}" href="{% url 'dashboard' %}"><span class="nav-icon">{% include "includes/icon.html" with name="dashboard" %}</span>Dashboard</a>
+        <a class="nav-item {% if 'member' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'member_list' %}"><span class="nav-icon">{% include "includes/icon.html" with name="members" %}</span>Members</a>
+        <a class="nav-item {% if 'structure' in request.resolver_match.url_name or 'assignment' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'structure_list' %}"><span class="nav-icon">{% include "includes/icon.html" with name="groups" %}</span>Groups</a>
+        <a class="nav-item {% if 'farm' in request.resolver_match.url_name or 'crop' in request.resolver_match.url_name or 'season' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'farm_list' %}"><span class="nav-icon">{% include "includes/icon.html" with name="farms" %}</span>Farms &amp; Crops</a>
+        <a class="nav-item {% if 'collection' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'collection_list' %}"><span class="nav-icon">{% include "includes/icon.html" with name="collections" %}</span>Collections</a>
+        <a class="nav-item {% if 'finance' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'finance_list' %}"><span class="nav-icon">{% include "includes/icon.html" with name="payments" %}</span>Payments &amp; Dues</a>
+        <a class="nav-item {% if 'field_' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'field_home' %}"><span class="nav-icon">{% include "includes/icon.html" with name="field" %}</span>Field Workspace</a>
+        <a class="nav-item {% if 'report' in request.resolver_match.url_name and request.resolver_match.url_name != 'dashboard' %}active{% endif %}" href="{% url 'reports_home' %}"><span class="nav-icon">{% include "includes/icon.html" with name="reports" %}</span>Reports</a>
         {% endif %}
-        {% if active_membership.role == 'admin' %}<p class="nav-label nav-label-spaced">Administration</p><a class="nav-item {% if 'staff_' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'staff_list' %}"><span class="nav-icon">⚙</span>Staff / Settings</a>{% endif %}
+        {% if active_membership.role == 'admin' %}<p class="nav-label nav-label-spaced">Administration</p><a class="nav-item {% if 'staff_' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'staff_list' %}"><span class="nav-icon">{% include "includes/icon.html" with name="settings" %}</span>Staff / Settings</a>{% endif %}
       </nav>
       {% elif user.is_superuser %}
-      <nav class="sidebar-nav"><p class="nav-label">Platform</p><a class="nav-item active" href="{% url 'platform_organisations' %}"><span class="nav-icon">▦</span>Organisations</a><a class="nav-item" href="{% url 'platform_organisation_create' %}"><span class="nav-icon">＋</span>Create workspace</a></nav>
+      <nav class="sidebar-nav"><p class="nav-label">Platform</p><a class="nav-item active" href="{% url 'platform_organisations' %}"><span class="nav-icon">{% include "includes/icon.html" with name="dashboard" %}</span>Organisations</a><a class="nav-item" href="{% url 'platform_organisation_create' %}"><span class="nav-icon">{% include "includes/icon.html" with name="plus" %}</span>Create workspace</a></nav>
       {% endif %}
-      <div class="sidebar-footer"><span class="user-avatar">{{ user.email|first|upper }}</span><span class="user-meta"><strong>{{ user.get_full_name|default:user.email }}</strong><small>{% if user.is_superuser %}Super Admin{% elif active_membership %}{{ active_membership.get_role_display }}{% endif %}</small></span><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="icon-button" title="Sign out" aria-label="Sign out">↗</button></form></div>
+      <div class="sidebar-footer"><span class="user-avatar">{% if user.first_name %}{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}{% else %}{{ user.email|first|upper }}{% endif %}</span><span class="user-meta"><strong>{{ user.get_full_name|default:user.email }}</strong><small>{% if user.is_superuser %}Super Admin{% elif active_membership %}{{ active_membership.get_role_display }}{% endif %}</small></span><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="icon-button" title="Sign out" aria-label="Sign out">{% include "includes/icon.html" with name="sign-out" %}</button></form></div>
     </aside>
     <label class="nav-overlay" for="nav-toggle" aria-hidden="true"></label>
     <div class="app-main">
-      <header class="app-topbar"><label class="menu-button" for="nav-toggle" aria-label="Open navigation">☰</label><div class="topbar-context"><small>{% if user.is_superuser %}KonnectCore Platform{% else %}{{ active_organisation.name }}{% endif %}</small><strong>{% block header_title %}Workspace{% endblock %}</strong></div><div class="topbar-user"><span class="user-avatar">{{ user.email|first|upper }}</span><span><strong>{{ user.get_full_name|default:user.email }}</strong><small>{% if user.is_superuser %}Super Admin{% elif active_membership %}{{ active_membership.get_role_display }}{% endif %}</small></span></div></header>
+      <header class="app-topbar"><label class="menu-button" for="nav-toggle" aria-label="Open navigation">{% include "includes/icon.html" with name="menu" %}</label><div class="topbar-context"><small>{% if user.is_superuser %}KonnectCore Platform{% else %}{{ active_organisation.name }}{% endif %}</small><strong>{% block header_title %}Workspace{% endblock %}</strong></div><div class="topbar-user"><span class="user-avatar">{% if user.first_name %}{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}{% else %}{{ user.email|first|upper }}{% endif %}</span><span><strong>{{ user.get_full_name|default:user.email }}</strong><small>{% if user.is_superuser %}Super Admin{% elif active_membership %}{{ active_membership.get_role_display }}{% endif %}</small></span></div></header>
       <main class="content"><div class="content-inner">{% for message in messages %}<div class="message" role="status"><span>✓</span>{{ message }}</div>{% endfor %}{% block content %}{% endblock %}</div></main>
     </div>
   </div>
