@@ -52,7 +52,7 @@
 {% else %}
   <main class="public-shell"><a class="public-brand" href="/"><span class="brand-mark">K</span><strong>KonnectCore</strong></a>{% for message in messages %}<div class="message" role="status">{{ message }}</div>{% endfor %}{% block public_content %}{% block content_public %}{% endblock %}{% endblock %}</main>
 {% endif %}
-<script>
+<script nonce="{{ request.csp_nonce }}">
 /* Prevent double submission of POST forms (UAT I-2). Server-side submission keys remain the real guarantee. */
 (function () {
   var BUSY = "data-submitting";
@@ -74,10 +74,18 @@
   function restoreAll(root) {
     (root || document).querySelectorAll("form[" + BUSY + "]").forEach(restore);
   }
+  // Confirmation prompts use data-confirm, because inline onsubmit= handlers are blocked by the security policy.
+  document.addEventListener("submit", function (event) {
+    var form = event.target;
+    if (!(form instanceof HTMLFormElement)) { return; }
+    var message = form.getAttribute("data-confirm");
+    if (message && !window.confirm(message)) { event.preventDefault(); }
+  }, false);
   document.addEventListener("submit", function (event) {
     var form = event.target;
     if (!(form instanceof HTMLFormElement)) { return; }
     if ((form.getAttribute("method") || "get").toLowerCase() !== "post") { return; }
+    if (event.defaultPrevented) { return; }
     if (form.hasAttribute(BUSY)) { event.preventDefault(); return; }
     form.setAttribute(BUSY, "");
     // Disable after the browser has built the form data, so the submitter's value is still sent.
