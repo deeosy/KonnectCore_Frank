@@ -63,3 +63,17 @@ class GroupMemberAssignmentForm(forms.ModelForm):
         if commit:
             assignment.save()
         return assignment
+
+
+class NewMemberAssignmentForm(forms.Form):
+    """Group-side fields when a brand-new member is created from a group (Kennedy feedback item 6)."""
+
+    joined_at = forms.DateField(
+        required=False,
+        label="Joined group on",
+        widget=forms.DateInput(attrs={"type": "date"}),
+    )
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("prefix", "group")
+        super().__init__(*args, **kwargs)

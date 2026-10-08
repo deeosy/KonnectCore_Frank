@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.db import transaction
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
@@ -6,9 +7,11 @@ from django.views.decorators.http import require_POST
 from apps.organisations.decorators import manager_or_admin_required, organisation_required
 from apps.organisations.scope import operational_staff_required
 
-from .forms import GroupMemberAssignmentForm, StructureUnitForm
+from .forms import GroupMemberAssignmentForm, NewMemberAssignmentForm, StructureUnitForm
+from apps.farms.forms import MemberFarmForm
+from apps.members.forms import MemberForm
 from apps.members.models import Member
-from apps.members.views import MEMBER_SORT_OPTIONS, sort_members
+from apps.members.views import MEMBER_SORT_OPTIONS, create_member_with_farm, sort_members
 
 from .models import GroupMemberAssignment, StructureUnit
 
@@ -66,6 +69,9 @@ def structure_create(request):
     if request.method == "POST" and form.is_valid():
         unit = form.save()
         messages.success(request, f"{unit.get_unit_type_display()} created.")
+        if request.POST.get("next") == "members":
+            # Kennedy feedback item 6: go straight to adding new members to the new unit.
+            return redirect("assignment_new_member", unit_id=unit.pk)
         return redirect("structure_detail", unit_id=unit.pk)
     return render(request, "groups/structure_form.html", {"form": form, "title": "Create structure unit"})
 
@@ -94,6 +100,41 @@ def assignment_add(request, unit_id):
         messages.success(request, f"{assignment.member.full_name} assigned.")
         return redirect("structure_detail", unit_id=unit.pk)
     return render(request, "groups/assignment_form.html", {"form": form, "unit": unit})
+
+
+@manager_or_admin_required
+def assignment_new_member(request, unit_id):
+    """Kennedy feedback item 6: create a new member (with optional farm) and add them to this unit in one step."""
+    unit = get_object_or_404(StructureUnit.objects.for_organisation(request.organisation), pk=unit_id)
+    form = MemberForm(request.POST or None, request.FILES or None, organisation=request.organisation)
+    farm_form = MemberFarmForm(request.POST or None, organisation=request.organisation)
+    join_form = NewMemberAssignmentForm(request.POST or None)
+    if request.method == "POST":
+        results = [form.is_valid(), farm_form.is_valid(), join_form.is_valid()]
+        if all(results):
+            member = None
+            with transaction.atomic():
+                member = create_member_with_farm(form, farm_form, organisation=request.organisation, actor=request.user)
+                if member is not None:
+                    assignment = GroupMemberAssignment(
+                        organisation=request.organisation,
+                        unit=unit,
+                        member=member,
+                        joined_at=join_form.cleaned_data.get("joined_at"),
+                    )
+                    assignment.full_clean()
+                    assignment.save()
+            if member is not None:
+                messages.success(request, f"{member.full_name} added to {unit.name}.")
+                if request.POST.get("next") == "another":
+                    return redirect("assignment_new_member", unit_id=unit.pk)
+                return redirect("structure_detail", unit_id=unit.pk)
+    return render(request, "groups/new_member_form.html", {
+        "form": form,
+        "farm_form": farm_form,
+        "join_form": join_form,
+        "unit": unit,
+    })
 
 
 @manager_or_admin_required
