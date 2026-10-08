@@ -7,6 +7,9 @@ from apps.organisations.decorators import manager_or_admin_required, organisatio
 from apps.organisations.scope import operational_staff_required
 
 from .forms import GroupMemberAssignmentForm, StructureUnitForm
+from apps.members.models import Member
+from apps.members.views import MEMBER_SORT_OPTIONS, sort_members
+
 from .models import GroupMemberAssignment, StructureUnit
 
 
@@ -42,7 +45,19 @@ def structure_detail(request, unit_id):
         ).prefetch_related("children", "member_assignments__member"),
         pk=unit_id,
     )
-    return render(request, "groups/structure_detail.html", {"unit": unit})
+    # Kennedy feedback item 5: same "Sort by" options as the Members list, for members within a group.
+    sort = request.GET.get("sort", "").strip()
+    if sort not in dict(MEMBER_SORT_OPTIONS):
+        sort = "name"
+    by_member = {assignment.member_id: assignment for assignment in unit.member_assignments.all()}
+    ordered = sort_members(Member.objects.for_organisation(request.organisation).filter(pk__in=list(by_member)), sort)
+    assignments = [by_member[member.pk] for member in ordered if member.pk in by_member]
+    return render(request, "groups/structure_detail.html", {
+        "unit": unit,
+        "assignments": assignments,
+        "sort": sort,
+        "sort_options": MEMBER_SORT_OPTIONS,
+    })
 
 
 @manager_or_admin_required

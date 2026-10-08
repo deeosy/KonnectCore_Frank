@@ -54,3 +54,6 @@ th.num,td.num{text-align:right}
 .nav-toggle:checked~.app-shell .quick-actions{display:none}
 }
 .location-finder{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.form-section{display:grid;gap:16px;min-width:0;margin:0;padding:14px 16px 18px;border:1px solid var(--line);border-radius:10px;background:#fbfdfb}.form-section legend{padding:0 6px;color:#1f3a2e;font-size:15px;font-weight:750}.form-section>p.muted{margin:-6px 0 0}.form-grid .form-section{grid-column:1/-1;grid-template-columns:1fr 1fr}.form-grid .form-section>p.muted,.form-grid .form-section>.location-finder,.form-grid .form-section>.errorlist,.form-section p:has(input[type="checkbox"]),.form-section p:has(textarea){grid-column:1/-1}.form-section input[type="checkbox"]{width:18px;height:18px;margin:0;accent-color:#1f5a3f}.form-section [id$="-crops"]{display:flex;flex-wrap:wrap;gap:4px 18px}.form-section [id$="-crops"] label{display:flex;align-items:center;gap:8px;min-height:44px;font-weight:600}@media (max-width:650px){.form-grid .form-section{grid-template-columns:1fr}.form-section{padding:12px 12px 16px}}
+.location-finder .button{min-height:44px}
+.cell-stack{display:block}

@@ -1,18 +1,74 @@
+from decimal import Decimal
 from pathlib import Path
 
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
-from django.db.models import Q
+from django.db.models import Case, DecimalField, ExpressionWrapper, F, OuterRef, Q, Subquery, Sum, Value, When
+from django.db.models.functions import Coalesce
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 
+from apps.farms.forms import MemberFarmForm
+from apps.farms.models import Farm
+from apps.finance.models import FinancialRecord
 from apps.organisations.decorators import manager_or_admin_required, organisation_required
 from apps.organisations.scope import operational_staff_required, visible_member_ids, visible_members
 
 from .forms import MemberDocumentForm, MemberForm, MemberImportForm
 from .models import Member, MemberDocument, MemberHistory
 from .services import changed_fields, import_members, member_snapshot, record_history
+
+
+# Kennedy feedback item 5: "Sort by" on the Members list. Keys are the only accepted ?sort= values.
+MEMBER_SORT_OPTIONS = (
+    ("name", "Name (A-Z)"),
+    ("joined", "Date joined (newest)"),
+    ("updated", "Last updated"),
+    ("farm_size", "Farm size (largest)"),
+    ("owed_to_member", "Owed to member (highest)"),
+    ("owed_by_member", "Owed by member (highest)"),
+)
+NAME_ORDER = ("first_name", "last_name", "membership_number")
+ACRES_TO_HECTARES = Decimal("0.404686")
+SORT_DECIMAL = DecimalField(max_digits=24, decimal_places=6)
+
+
+def _member_total(subquery):
+    """Per-member total from a subquery, 0 when the member has no rows."""
+    return Coalesce(Subquery(subquery, output_field=SORT_DECIMAL), Value(Decimal("0")), output_field=SORT_DECIMAL)
+
+
+def _outstanding_total(record_types):
+    open_amount = ExpressionWrapper(F("amount") - F("paid_amount"), output_field=SORT_DECIMAL)
+    rows = (
+        FinancialRecord.objects.filter(member=OuterRef("pk"), record_type__in=record_types)
+        .exclude(status=FinancialRecord.Status.CANCELLED)
+        .values("member").annotate(total=Sum(open_amount)).values("total")
+    )
+    return _member_total(rows)
+
+
+def sort_members(members, sort):
+    """Order an already-scoped member queryset by one of MEMBER_SORT_OPTIONS (name otherwise)."""
+    if sort == "joined":
+        return members.order_by("-created_at", *NAME_ORDER)
+    if sort == "updated":
+        return members.order_by("-updated_at", *NAME_ORDER)
+    if sort == "farm_size":
+        hectares = Case(
+            When(size_unit=Farm.SizeUnit.ACRES, then=F("size") * Value(ACRES_TO_HECTARES)),
+            default=F("size"), output_field=SORT_DECIMAL,
+        )
+        rows = Farm.objects.filter(member=OuterRef("pk"), size__isnull=False).values("member").annotate(total=Sum(hectares)).values("total")
+        return members.annotate(sort_farm_hectares=_member_total(rows)).order_by("-sort_farm_hectares", *NAME_ORDER)
+    if sort == "owed_to_member":
+        total = _outstanding_total([FinancialRecord.Type.MEMBER_PAYMENT])
+        return members.annotate(sort_owed_to_member=total).order_by("-sort_owed_to_member", *NAME_ORDER)
+    if sort == "owed_by_member":
+        total = _outstanding_total([FinancialRecord.Type.DUE, FinancialRecord.Type.CONTRIBUTION])
+        return members.annotate(sort_owed_by_member=total).order_by("-sort_owed_by_member", *NAME_ORDER)
+    return members.order_by(*NAME_ORDER)
 
 
 def save_member_form(form, *, organisation, actor, creating):
@@ -60,11 +116,17 @@ def member_list(request):
     else:
         # Archived members are hidden by default; choose the Archived filter to see them.
         members = members.exclude(status=Member.Status.ARCHIVED)
+    sort = request.GET.get("sort", "").strip()
+    if sort not in dict(MEMBER_SORT_OPTIONS):
+        sort = "name"
+    members = sort_members(members, sort)
     return render(request, "members/member_list.html", {
         "members": members,
         "query": query,
         "selected_status": status,
         "statuses": Member.Status.choices,
+        "sort": sort,
+        "sort_options": MEMBER_SORT_OPTIONS,
     })
 
 
@@ -77,16 +139,40 @@ def member_detail(request, member_id):
     return render(request, "members/member_detail.html", {"member": member})
 
 
+def create_member_with_farm(form, farm_form, *, organisation, actor):
+    """Save a new member plus the optional farm and crops in one transaction.
+
+    Returns the member, or None when errors were added to either form (nothing is kept).
+    """
+    with transaction.atomic():
+        member = save_member_form(form, organisation=organisation, actor=actor, creating=True)
+        if member is None:
+            return None
+        try:
+            farm_form.save_for(member)
+        except ValidationError as exc:
+            transaction.set_rollback(True)
+            for field, errors in exc.message_dict.items():
+                for error in errors:
+                    farm_form.add_error(field if field in farm_form.fields else None, error)
+            return None
+        record_history(member, MemberHistory.Action.CREATED, actor, {"member": member_snapshot(member)})
+    return member
+
+
 @manager_or_admin_required
 def member_create(request):
     form = MemberForm(request.POST or None, request.FILES or None, organisation=request.organisation)
-    if request.method == "POST" and form.is_valid():
-        member = save_member_form(form, organisation=request.organisation, actor=request.user, creating=True)
-        if member is not None:
-            record_history(member, MemberHistory.Action.CREATED, request.user, {"member": member_snapshot(member)})
-            messages.success(request, "Member added.")
-            return redirect("member_detail", member_id=member.pk)
-    return render(request, "members/member_form.html", {"form": form, "title": "Add member"})
+    farm_form = MemberFarmForm(request.POST or None, organisation=request.organisation)
+    if request.method == "POST":
+        member_valid = form.is_valid()
+        farm_valid = farm_form.is_valid()
+        if member_valid and farm_valid:
+            member = create_member_with_farm(form, farm_form, organisation=request.organisation, actor=request.user)
+            if member is not None:
+                messages.success(request, "Member added.")
+                return redirect("member_detail", member_id=member.pk)
+    return render(request, "members/member_form.html", {"form": form, "farm_form": farm_form, "title": "Add member"})
 
 
 @manager_or_admin_required

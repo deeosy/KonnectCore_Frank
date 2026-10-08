@@ -6,6 +6,7 @@ from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 
 from apps.farms.models import Crop
+from apps.groups.models import GroupMemberAssignment, StructureUnit
 from apps.members.models import Member
 from apps.organisations.decorators import manager_or_admin_required, organisation_required
 from apps.organisations.scope import operational_staff_required, visible_member_ids
@@ -17,6 +18,17 @@ from django.utils import timezone
 
 from .forms import CollectionFilterForm, CollectionRecordForm, CollectionVoidForm
 from .models import CollectionRecord
+
+
+def _group_member_ids(organisation, unit_id):
+    """Member ids assigned to a group or any unit below it (Kennedy feedback item 8)."""
+    units = StructureUnit.objects.for_organisation(organisation)
+    ids = {unit_id}
+    frontier = [unit_id]
+    while frontier:
+        frontier = [pk for pk in units.filter(parent_id__in=frontier).values_list("pk", flat=True) if pk not in ids]
+        ids.update(frontier)
+    return GroupMemberAssignment.objects.for_organisation(organisation).filter(unit_id__in=ids).values("member_id")
 
 
 def _matching_pk(queryset, value):
@@ -34,7 +46,8 @@ def collection_list(request):
     members = Member.objects.for_organisation(request.organisation)
     crops = Crop.objects.for_organisation(request.organisation)
     filters = CollectionFilterForm(request.GET)
-    selected_member = selected_crop = ""
+    groups = StructureUnit.objects.for_organisation(request.organisation).filter(is_active=True)
+    selected_member = selected_crop = selected_group = ""
     values = {"q": "", "date_from": "", "date_to": ""}
     if filters.is_valid():
         data = filters.cleaned_data
@@ -43,6 +56,9 @@ def collection_list(request):
         values["date_to"] = data.get("date_to") or ""
         selected_member = _matching_pk(members, data.get("member"))
         selected_crop = _matching_pk(crops, data.get("crop"))
+        selected_group = _matching_pk(groups, data.get("group"))
+        if selected_group:
+            records = records.filter(member_id__in=_group_member_ids(request.organisation, data["group"]))
         if values["q"]:
             records = records.filter(
                 Q(member__first_name__icontains=values["q"])
@@ -66,6 +82,8 @@ def collection_list(request):
         "query": values["q"],
         "selected_member": selected_member,
         "selected_crop": selected_crop,
+        "groups": groups,
+        "selected_group": selected_group,
         "date_from": values["date_from"],
         "date_to": values["date_to"],
         "filter_errors": filters.errors,
@@ -92,12 +110,18 @@ def collection_create(request):
     )
     if member_id:
         initial["member"] = member_id
+    groups = StructureUnit.objects.for_organisation(request.organisation).filter(is_active=True)
+    selected_group = _matching_pk(groups, request.GET.get("group", "").strip())
+    member_queryset = None
+    if selected_group:
+        member_queryset = _group_member_ids(request.organisation, groups.get(pk=selected_group).pk)
     form = CollectionRecordForm(
         request.POST or None,
         request.FILES or None,
         organisation=request.organisation,
         recorded_by=request.user,
         initial=initial,
+        member_queryset=member_queryset,
     )
     if request.method == "POST" and form.is_valid():
         try:
@@ -110,6 +134,8 @@ def collection_create(request):
     return render(request, "collections/collection_form.html", {
         "form": form,
         "title": "Record produce collection",
+        "groups": groups,
+        "selected_group": selected_group,
     })
 
 

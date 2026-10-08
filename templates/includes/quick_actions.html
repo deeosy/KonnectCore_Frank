@@ -1,15 +1,15 @@
-{# Mobile quick-action bar (Kennedy feedback p.7). Shown at <=900px via CSS; the sidebar drawer stays available. #}
-{# Links only point at views the current role may open, so the bar never leads to a 403. #}
-{% if active_organisation and active_membership %}{% with un=request.resolver_match.url_name %}
-<nav class="quick-actions" aria-label="Quick actions">
-{% if active_membership.role == "field_officer" %}
-  <a class="qa-item{% if un == 'field_home' %} active{% endif %}" href="{% url 'field_home' %}"{% if un == 'field_home' %} aria-current="page"{% endif %}>{% include "includes/icon.html" with name="home" size=22 %}<span>Home</span></a>
-  <a class="qa-item{% if un == 'field_member_create' %} active{% endif %}" href="{% url 'field_member_create' %}"{% if un == 'field_member_create' %} aria-current="page"{% endif %}>{% include "includes/icon.html" with name="user-plus" size=22 %}<span>Add Member</span></a>
-{% else %}
-  <a class="qa-item{% if un == 'member_create' %} active{% endif %}" href="{% url 'member_create' %}"{% if un == 'member_create' %} aria-current="page"{% endif %}>{% include "includes/icon.html" with name="user-plus" size=22 %}<span>Add Member</span></a>
-  <a class="qa-item{% if un == 'collection_create' %} active{% endif %}" href="{% url 'collection_create' %}"{% if un == 'collection_create' %} aria-current="page"{% endif %}>{% include "includes/icon.html" with name="clipboard-plus" size=22 %}<span>Add Collection</span></a>
-  <a class="qa-item{% if un == 'season_pick_farm' or un == 'season_create' %} active{% endif %}" href="{% url 'season_pick_farm' %}"{% if un == 'season_pick_farm' or un == 'season_create' %} aria-current="page"{% endif %}>{% include "includes/icon.html" with name="farms" size=22 %}<span>Add Crop</span></a>
-  <a class="qa-item{% if un == 'dashboard' or un == 'workspace' %} active{% endif %}" href="{% url 'dashboard' %}"{% if un == 'dashboard' or un == 'workspace' %} aria-current="page"{% endif %}>{% include "includes/icon.html" with name="home" size=22 %}<span>Home</span></a>
-{% endif %}
-</nav>
-{% endwith %}{% endif %}
+{# Mobile quick-action bar (Kennedy feedback p.7). Shown at <=900px via CSS; the sidebar drawer stays available. #}
+{# Links only point at views the current role may open, so the bar never leads to a 403. #}
+{% if active_organisation and active_membership %}{% with un=request.resolver_match.url_name %}
+<nav class="quick-actions" aria-label="Quick actions">
+{% if active_membership.role == "field_officer" %}
+  <a class="qa-item{% if un == 'field_home' %} active{% endif %}" href="{% url 'field_home' %}"{% if un == 'field_home' %} aria-current="page"{% endif %}>{% include "includes/icon.html" with name="home" size=22 %}<span>Home</span></a>
+  <a class="qa-item{% if un == 'field_member_create' %} active{% endif %}" href="{% url 'field_member_create' %}"{% if un == 'field_member_create' %} aria-current="page"{% endif %}>{% include "includes/icon.html" with name="user-plus" size=22 %}<span>Add Member</span></a>
+{% else %}
+  <a class="qa-item{% if un == 'member_create' %} active{% endif %}" href="{% url 'member_create' %}"{% if un == 'member_create' %} aria-current="page"{% endif %}>{% include "includes/icon.html" with name="user-plus" size=22 %}<span>Add Member</span></a>
+  <a class="qa-item{% if un == 'collection_create' %} active{% endif %}" href="{% url 'collection_create' %}"{% if un == 'collection_create' %} aria-current="page"{% endif %}>{% include "includes/icon.html" with name="clipboard-plus" size=22 %}<span>Add Collection</span></a>
+  <a class="qa-item{% if un == 'season_pick_farm' or un == 'season_create' %} active{% endif %}" href="{% url 'season_pick_farm' %}"{% if un == 'season_pick_farm' or un == 'season_create' %} aria-current="page"{% endif %}>{% include "includes/icon.html" with name="farms" size=22 %}<span>Add Crop</span></a>
+  <a class="qa-item{% if un == 'dashboard' or un == 'workspace' %} active{% endif %}" href="{% url 'dashboard' %}"{% if un == 'dashboard' or un == 'workspace' %} aria-current="page"{% endif %}>{% include "includes/icon.html" with name="home" size=22 %}<span>Home</span></a>
+{% endif %}
+</nav>
+{% endwith %}{% endif %}

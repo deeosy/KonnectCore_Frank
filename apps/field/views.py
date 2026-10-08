@@ -6,13 +6,13 @@ import mimetypes
 from django.http import FileResponse,Http404
 from .models import FieldVisit
 from apps.collections.forms import CollectionRecordForm
-from apps.farms.forms import FarmForm
+from apps.farms.forms import FarmForm,MemberFarmForm
 from apps.farms.models import Farm
 from apps.groups.models import GroupMemberAssignment
 from apps.members.forms import MemberForm
 from apps.members.models import Member,MemberHistory
 from apps.members.services import member_snapshot,record_history
-from apps.members.views import save_member_form
+from apps.members.views import create_member_with_farm,save_member_form
 from apps.organisations.decorators import organisation_required
 from apps.organisations.models import OrganisationMembership
 from apps.organisations.scope import visible_members
@@ -40,11 +40,14 @@ def home(request):
 @field_only
 def register_member(request):
  form=MemberForm(request.POST or None,request.FILES or None,organisation=request.organisation)
- if request.method=='POST' and form.is_valid():
-  x=save_member_form(form,organisation=request.organisation,actor=request.user,creating=True)
-  if x is not None:
-   record_history(x,MemberHistory.Action.CREATED,request.user,{"member":member_snapshot(x)});messages.success(request,f'{x.full_name} has been added and is awaiting assignment. The member will appear in your list once an Admin or Manager adds them to one of your groups.');return redirect('field_home')
- return render(request,'field/form.html',{'form':form,'title':'Add member'})
+ farm_form=MemberFarmForm(request.POST or None,organisation=request.organisation)
+ if request.method=='POST':
+  member_valid=form.is_valid();farm_valid=farm_form.is_valid()
+  if member_valid and farm_valid:
+   x=create_member_with_farm(form,farm_form,organisation=request.organisation,actor=request.user)
+   if x is not None:
+    messages.success(request,f'{x.full_name} has been added and is awaiting assignment. The member will appear in your list once an Admin or Manager adds them to one of your groups.');return redirect('field_home')
+ return render(request,'field/form.html',{'form':form,'farm_form':farm_form,'title':'Add member'})
 @field_only
 def member_detail(request,member_id):
  """Read-only member page limited to the officer's assigned members (404 otherwise)."""

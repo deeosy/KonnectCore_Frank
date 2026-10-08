@@ -22,6 +22,7 @@ class CollectionFilterForm(forms.Form):
     q = forms.CharField(required=False)
     member = forms.UUIDField(required=False)
     crop = forms.UUIDField(required=False)
+    group = forms.UUIDField(required=False)
     date_from = forms.DateField(required=False)
     date_to = forms.DateField(required=False)
 
@@ -108,14 +109,18 @@ class CollectionRecordForm(forms.ModelForm):
             "price_per_unit": forms.NumberInput(attrs={"step": "0.01", "min": "0"}),
         }
 
-    def __init__(self, *args, organisation, recorded_by, **kwargs):
+    def __init__(self, *args, organisation, recorded_by, member_queryset=None, **kwargs):
+        self.member_queryset = member_queryset
         self.organisation = organisation
         self.recorded_by = recorded_by
         super().__init__(*args, **kwargs)
         self.instance.organisation = organisation
         if self.instance._state.adding:
             self.instance.recorded_by = recorded_by
-        self.fields["member"].queryset = Member.objects.for_organisation(organisation)
+        members = Member.objects.for_organisation(organisation)
+        if member_queryset is not None:
+            members = members.filter(pk__in=member_queryset)
+        self.fields["member"].queryset = members
         crops = Crop.objects.for_organisation(organisation).filter(is_active=True)
         if not self.instance._state.adding and self.instance.crop_id:
             crops = Crop.objects.for_organisation(organisation).filter(

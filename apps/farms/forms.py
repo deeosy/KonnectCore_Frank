@@ -62,3 +62,69 @@ class FarmCropSeasonForm(TenantModelForm):
         if commit:
             instance.save()
         return instance
+
+
+class MemberFarmForm(forms.ModelForm):
+    """Optional farm and crops captured on the Add member screen.
+
+    Uses the "farm" prefix so its fields never clash with MemberForm (both have "location").
+    Nothing is saved unless farm details or crops are entered.
+    """
+
+    DETAIL_FIELDS = ("size", "location", "latitude", "longitude")
+
+    crops = forms.ModelMultipleChoiceField(
+        queryset=Crop.objects.none(), required=False, widget=forms.CheckboxSelectMultiple,
+        label="Crops grown on this farm",
+    )
+    season = forms.CharField(
+        max_length=120, required=False, label="Season",
+        help_text="For example 2026 major. Needed when crops are selected.",
+    )
+
+    class Meta:
+        model = Farm
+        fields = ["name", "size", "size_unit", "location", "latitude", "longitude"]
+        widgets = {"latitude": forms.NumberInput(attrs={"step": "0.000001"}), "longitude": forms.NumberInput(attrs={"step": "0.000001"})}
+        labels = {"name": "Farm name", "location": "Farm location"}
+
+    def __init__(self, *args, organisation, **kwargs):
+        kwargs.setdefault("prefix", "farm")
+        self.organisation = organisation
+        super().__init__(*args, **kwargs)
+        self.instance.organisation = organisation
+        self.fields["name"].required = False
+        self.fields["size_unit"].required = False
+        self.fields["crops"].queryset = Crop.objects.for_organisation(organisation).filter(is_active=True)
+
+    def clean_size_unit(self):
+        return self.cleaned_data.get("size_unit") or Farm.SizeUnit.HECTARES
+
+    def clean_name(self):
+        return (self.cleaned_data.get("name") or "").strip() or "Main farm"
+
+    def clean(self):
+        cleaned = super().clean()
+        cleaned["season"] = (cleaned.get("season") or "").strip()
+        if cleaned.get("crops") and not cleaned["season"]:
+            self.add_error("season", "Enter the season for the selected crops.")
+        return cleaned
+
+    def has_farm_details(self):
+        data = self.cleaned_data
+        return bool(data.get("crops")) or any(data.get(name) not in (None, "") for name in self.DETAIL_FIELDS)
+
+    def save_for(self, member):
+        """Save the farm and one crop season per selected crop. Call inside a transaction."""
+        if not self.has_farm_details():
+            return None
+        farm = super().save(commit=False)
+        farm.organisation = self.organisation
+        farm.member = member
+        farm.full_clean()
+        farm.save()
+        for crop in self.cleaned_data.get("crops") or []:
+            season = FarmCropSeason(organisation=self.organisation, farm=farm, crop=crop, season=self.cleaned_data["season"])
+            season.full_clean()
+            season.save()
+        return farm
