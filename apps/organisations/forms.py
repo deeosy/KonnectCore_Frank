@@ -13,15 +13,42 @@ class LoginForm(AuthenticationForm):
     def clean_username(self):
         return self.cleaned_data["username"].strip().lower()
 
+# Currencies a new workspace can use. Add more here later; stored as the ISO 4217 code.
+PLATFORM_CURRENCY_CHOICES = [
+    ("GHS", "Ghana Cedi (GHS)"),
+    ("USD", "US Dollar (USD)"),
+    ("NGN", "Nigerian Naira (NGN)"),
+]
+SLUG_MAX_LENGTH = Organisation._meta.get_field("slug").max_length
+
+def unique_organisation_slug(name):
+    """Build a unique slug from an organisation name, adding -2, -3... on clashes."""
+    base = slugify(name)[:SLUG_MAX_LENGTH].strip("-") or "organisation"
+    candidate, n = base, 2
+    while Organisation.objects.filter(slug=candidate).exists():
+        suffix = f"-{n}"
+        candidate = base[:SLUG_MAX_LENGTH - len(suffix)].rstrip("-") + suffix
+        n += 1
+    return candidate
+
 class PlatformOrganisationForm(forms.ModelForm):
+    slug = forms.SlugField(
+        max_length=SLUG_MAX_LENGTH, required=False,
+        help_text="Letters, numbers and hyphens. Use Generate from name, or leave blank to create one automatically.",
+    )
+    currency = forms.ChoiceField(choices=PLATFORM_CURRENCY_CHOICES, initial="GHS")
     admin_email = forms.EmailField()
     admin_first_name = forms.CharField(max_length=150)
     admin_last_name = forms.CharField(max_length=150, required=False)
     class Meta:
         model = Organisation
         fields = ["name", "slug", "currency", "status"]
-    def clean_currency(self):
-        return (self.cleaned_data.get("currency") or "").strip().upper()
+    def clean(self):
+        cleaned = super().clean()
+        # Blank slug: generate a unique one from the name. Unique checks still run afterwards.
+        if not cleaned.get("slug") and cleaned.get("name"):
+            cleaned["slug"] = unique_organisation_slug(cleaned["name"])
+        return cleaned
     def clean_admin_email(self):
         value = self.cleaned_data["admin_email"].strip().lower()
         if User.objects.filter(email=value).exists(): raise forms.ValidationError("A user with this email already exists.")

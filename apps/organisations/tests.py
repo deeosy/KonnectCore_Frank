@@ -133,27 +133,73 @@ class PlatformOnboardingTests(TenantFixture):
         response = self.client.get(reverse("platform_organisations"))
         self.assertRedirects(response, f"{reverse('login')}?next={reverse('platform_organisations')}")
 
+    def create_payload(self, **overrides):
+        data = {
+            "name": "Gamma Growers", "slug": "gamma", "currency": "USD", "status": Organisation.Status.ACTIVE,
+            "admin_email": "admin@gamma.test", "admin_first_name": "Grace", "admin_last_name": "A",
+        }
+        data.update(overrides)
+        return data
+
     def test_super_admin_creates_workspace_and_first_admin_invitation(self):
         self.client.force_login(self.platform_admin)
-        response = self.client.post(reverse("platform_organisation_create"), {
-            "name": "Gamma Growers", "slug": "gamma", "currency": "UGX", "status": Organisation.Status.ACTIVE,
-            "admin_email": "admin@gamma.test", "admin_first_name": "Grace", "admin_last_name": "A",
-        })
+        response = self.client.post(reverse("platform_organisation_create"), self.create_payload())
         self.assertEqual(response.status_code, 200)
         gamma = Organisation.objects.get(slug="gamma")
+        self.assertEqual(gamma.currency, "USD")
         invitation = StaffInvitation.objects.get(organisation=gamma)
         self.assertEqual(invitation.role, OrganisationMembership.Role.ADMIN)
         self.assertFalse(User.objects.filter(email="admin@gamma.test").exists())
         self.assertNotContains(response, invitation.token_hash)
         self.assertContains(response, "/invitations/")
 
-    def test_workspace_currency_is_stored_in_capitals(self):
+    def test_currency_dropdown_offers_only_cedis_dollar_and_naira(self):
         self.client.force_login(self.platform_admin)
-        self.client.post(reverse("platform_organisation_create"), {
-            "name": "Delta Growers", "slug": "delta", "currency": " ghs ", "status": Organisation.Status.ACTIVE,
-            "admin_email": "admin@delta.test", "admin_first_name": "Dora", "admin_last_name": "A",
-        })
-        self.assertEqual(Organisation.objects.get(slug="delta").currency, "GHS")
+        response = self.client.get(reverse("platform_organisation_create"))
+        self.assertContains(response, '<select name="currency"')
+        for code in ("GHS", "USD", "NGN"):
+            self.assertContains(response, f'<option value="{code}"')
+        self.assertContains(response, '<option value="GHS" selected>')
+        self.assertNotContains(response, '<option value="KES"')
+
+    def test_currency_outside_the_list_is_rejected(self):
+        self.client.force_login(self.platform_admin)
+        for code in ("UGX", "ghs"):
+            response = self.client.post(reverse("platform_organisation_create"), self.create_payload(currency=code))
+            self.assertEqual(response.status_code, 200)
+            self.assertIn("currency", response.context["form"].errors)
+        self.assertFalse(Organisation.objects.filter(slug="gamma").exists())
+
+    def test_each_listed_currency_can_be_saved(self):
+        self.client.force_login(self.platform_admin)
+        for i, code in enumerate(("GHS", "USD", "NGN")):
+            self.client.post(reverse("platform_organisation_create"), self.create_payload(
+                name=f"Org {code}", slug=f"org-{i}", currency=code, admin_email=f"admin{i}@cur.test"))
+            self.assertEqual(Organisation.objects.get(slug=f"org-{i}").currency, code)
+
+    def test_blank_slug_is_generated_from_name(self):
+        self.client.force_login(self.platform_admin)
+        self.client.post(reverse("platform_organisation_create"), self.create_payload(name="Dennis COOP", slug=""))
+        self.assertTrue(Organisation.objects.filter(name="Dennis COOP", slug="dennis-coop").exists())
+
+    def test_generated_slug_avoids_existing_slugs(self):
+        self.client.force_login(self.platform_admin)
+        # self.alpha already uses the slug "alpha".
+        self.client.post(reverse("platform_organisation_create"), self.create_payload(name="Alpha", slug=""))
+        self.assertTrue(Organisation.objects.filter(name="Alpha", slug="alpha-2").exists())
+
+    def test_typed_duplicate_slug_is_still_rejected(self):
+        self.client.force_login(self.platform_admin)
+        response = self.client.post(reverse("platform_organisation_create"), self.create_payload(slug="alpha"))
+        self.assertIn("slug", response.context["form"].errors)
+        self.assertEqual(Organisation.objects.filter(slug="alpha").count(), 1)
+
+    def test_create_page_loads_slug_generator_script_with_nonce(self):
+        self.client.force_login(self.platform_admin)
+        response = self.client.get(reverse("platform_organisation_create"))
+        self.assertContains(response, "js/org_slug.js")
+        nonce = response.wsgi_request.csp_nonce
+        self.assertContains(response, f'org_slug.js" nonce="{nonce}"')
 
 class InvitationSecurityTests(TenantFixture):
     def test_invitation_token_is_hashed_and_single_use(self):
