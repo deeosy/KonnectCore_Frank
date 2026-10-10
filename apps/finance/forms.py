@@ -14,6 +14,16 @@ ZERO = Decimal("0.00")
 ALLOC_PREFIX = "alloc_"
 
 
+class PlaceholderSelect(forms.Select):
+    """Select whose blank option is a disabled placeholder (shown, but not pickable from the list)."""
+
+    def create_option(self, name, value, label, selected, index, subindex=None, attrs=None):
+        option = super().create_option(name, value, label, selected, index, subindex=subindex, attrs=attrs)
+        if value in ("", None):
+            option["attrs"]["disabled"] = True
+        return option
+
+
 class FinancialRecordForm(forms.ModelForm):
     """Payments, dues and expenses. Collection allocation rules: docs/architecture.md, Finance."""
 
@@ -119,7 +129,11 @@ class FinancialRecordForm(forms.ModelForm):
     }
 
     def _apply_choice_prompts(self):
-        """Replace Django's '---------' blank choices with plain prompts."""
+        """Replace Django's '---------' blank choices with plain prompts.
+
+        On required dropdowns the prompt is a disabled placeholder, so it cannot be picked
+        from the list. Optional dropdowns keep a selectable blank so they can be cleared.
+        """
         for name, prompt in self.PROMPTS.items():
             field = self.fields.get(name)
             if field is None:
@@ -129,6 +143,11 @@ class FinancialRecordForm(forms.ModelForm):
                     field.empty_label = prompt
             else:
                 field.choices = [("", prompt) if value == "" else (value, label) for value, label in field.choices]
+            if field.required:
+                widget = PlaceholderSelect(attrs=field.widget.attrs)
+                widget.choices = field.widget.choices
+                widget.is_required = True
+                field.widget = widget
 
     def clean_paid_amount(self):
         value = self.cleaned_data.get("paid_amount")
