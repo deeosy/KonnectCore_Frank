@@ -324,6 +324,45 @@ select option{background:var(--kc-card);color:var(--kc-fg)}
 @media(max-width:900px){.mp-grid{grid-template-columns:minmax(0,1fr)}.mp-side{position:static}}
 @media(max-width:650px){.mp-identity{align-items:flex-start;gap:14px}.mp-avatar{width:56px;height:56px;border-radius:14px}.mp-avatar-initials{font-size:20px}.mp-stats{gap:12px}.mp-stat{padding:16px}.mp-stat .mp-tile{position:static;width:32px;height:32px;margin-bottom:10px}.mp-stat-label{padding-right:0}.mp-stat strong{font-size:22px}}
 
+/* ---------- Detail pages (shared: collection, farm, payment, group) ---------- */
+.card{padding:22px 24px}
+.card h2{margin:0 0 14px;font-size:16px}
+.card+.card,.card+.profile-grid,.profile-grid+.card,.message+.card,.message+.profile-grid{margin-top:20px}
+.profile-grid{grid-template-columns:minmax(300px,380px) minmax(0,1fr);gap:20px}
+.stack-sections{gap:20px}
+.detail-list,.profile-card dl{grid-template-columns:minmax(150px,210px) minmax(0,1fr);gap:0;margin:0}
+.detail-list dt,.detail-list dd{padding:11px 0;border-bottom:1px solid var(--kc-border)}
+.detail-list dt:last-of-type,.detail-list dd:last-of-type{border-bottom:0}
+.detail-list dt{padding-right:16px;color:var(--kc-fg-muted);font-size:13px}
+.detail-list dd{color:var(--kc-fg);font-size:14px;font-weight:600;overflow-wrap:anywhere}
+.card>.small,.card>p.muted{margin:14px 0 0}
+.section-head{margin-bottom:14px}
+.section-head h2{margin:0}
+.season-record{padding:16px 0;border-bottom-color:var(--kc-border)}
+.season-record:first-of-type{padding-top:4px}
+.season-record strong{color:var(--kc-fg);font-size:15px}
+.yield-list{margin:10px 0}
+.yield-list dt{color:var(--kc-fg-muted);font-size:13px}
+.yield-list dd{color:var(--kc-fg);font-size:14px;font-weight:600}
+.collection-photo,.collection-photo-placeholder{border-radius:12px}
+.collection-photo-placeholder{border:1px dashed var(--kc-border-strong);color:var(--kc-fg-muted);font-size:14px}
+.card .filter-bar{grid-template-columns:minmax(0,1fr) auto;margin-bottom:8px;padding:0;border:0;background:transparent}
+.assignment-row{border-bottom-color:var(--kc-border)}
+.link-danger{color:var(--kc-bad)}
+.link-danger:hover,.link-danger:focus-visible{color:var(--kc-fg)}
+/* Native file inputs: themed upload button */
+input[type="file"]{padding:6px 8px;color:var(--kc-fg-2);font-size:13px}
+input[type="file"]::file-selector-button{margin-right:12px;padding:6px 12px;border:1px solid var(--kc-border-strong);border-radius:8px;background:var(--kc-muted);color:var(--kc-fg);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+input[type="file"]::file-selector-button:hover{background:var(--kc-hover)}
+/* Tables: keep headers and first-column dates on one line on wider screens */
+@media(min-width:651px){.table-wrap th{white-space:nowrap}.table-wrap td:first-child{white-space:nowrap}}
+@media(max-width:900px){.profile-grid{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:650px){.card{padding:18px 16px}.detail-list,.profile-card dl{grid-template-columns:minmax(110px,40%) minmax(0,1fr)}.card .filter-bar{grid-template-columns:minmax(0,1fr)}}
+
+/* ---------- Detail pages: grid alignment fixes ---------- */
+.profile-grid>.card+.card,.profile-grid>.card+.stack-sections,.stack-sections>.card+.card{margin-top:0}
+.profile-grid>.card:first-child .detail-list{grid-template-columns:minmax(96px,128px) minmax(0,1fr)}
+
 /* ---------- Responsive (restated: app.css media rules come earlier in the cascade) ---------- */
 @media(max-width:1280px){.metric-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(max-width:900px){
@@ -353,3 +392,13 @@ select option{background:var(--kc-card);color:var(--kc-fg)}
   .table-wrap.responsive tbody tr{border-color:var(--kc-border);border-radius:var(--kc-radius-lg);background:var(--kc-card);box-shadow:none}
 }
 @media(prefers-reduced-motion:reduce){.button,.nav-item,a.metric-link,.theme-toggle{transition:none}.button:hover,a.metric-link:active{transform:none}}
+/* ---------- Reports ---------- */
+.report-filters{grid-template-columns:repeat(auto-fill,minmax(180px,1fr));align-items:end;margin-bottom:12px}
+.report-filters .button{width:100%}
+.export-grid{align-items:center;gap:8px;margin:4px 0 24px}
+.export-grid a{display:inline-flex;align-items:center;padding:6px 14px;border:1px solid var(--kc-border);border-radius:999px;font-size:13px;font-weight:600;transition:border-color .15s ease}
+.export-grid a:hover,.export-grid a:focus-visible{border-color:var(--kc-accent)}
+.report-section{margin:0 0 20px;padding:20px 20px 8px;border:1px solid var(--kc-border);border-radius:var(--kc-radius-lg);background:var(--kc-card)}
+.report-section .table-wrap{border:0;border-radius:0;background:transparent}
+.report-section .section-head .status{background:var(--kc-muted);color:var(--kc-fg-muted)}
+@media(max-width:650px){.report-section{padding:16px 14px 4px}.report-filters{grid-template-columns:1fr}}

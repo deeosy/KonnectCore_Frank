@@ -36,6 +36,7 @@ TEMPLATES = [{
         "django.contrib.messages.context_processors.messages", "apps.organisations.context_processors.tenant_context",
     ]},
 }]
+FORM_RENDERER = "apps.core.form_rendering.FormRenderer"
 WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
