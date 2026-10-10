@@ -4,9 +4,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#0f5132">
+  <meta name="theme-color" content="#131e25">
   <title>{% block title %}KonnectCore{% endblock %}</title>
+  <script nonce="{{ request.csp_nonce }}">try{var kcTheme=localStorage.getItem("kc-theme");if(kcTheme==="light"||kcTheme==="dark"){document.documentElement.setAttribute("data-theme",kcTheme);}}catch(e){}</script>
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/theme.css' %}">
 </head>
 <body class="{% if user.is_authenticated %}is-authenticated{% else %}is-public{% endif %}">
 {% if user.is_authenticated %}
@@ -45,7 +47,7 @@
     </aside>
     <label class="nav-overlay" for="nav-toggle" aria-hidden="true"></label>
     <div class="app-main">
-      <header class="app-topbar"><label class="menu-button" for="nav-toggle" aria-label="Open navigation">{% include "includes/icon.html" with name="menu" %}</label><div class="topbar-context"><small>{% if user.is_superuser %}KonnectCore Platform{% else %}{{ active_organisation.name }}{% endif %}</small><strong>{% block header_title %}Workspace{% endblock %}</strong></div><div class="topbar-user"><span class="user-avatar">{% if user.first_name %}{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}{% else %}{{ user.email|first|upper }}{% endif %}</span><span><strong>{{ user.get_full_name|default:user.email }}</strong><small>{% if user.is_superuser %}Super Admin{% elif active_membership %}{{ active_membership.get_role_display }}{% endif %}</small></span></div></header>
+      <header class="app-topbar"><label class="menu-button" for="nav-toggle" aria-label="Open navigation">{% include "includes/icon.html" with name="menu" %}</label><div class="topbar-context"><small>{% if user.is_superuser %}KonnectCore Platform{% else %}{{ active_organisation.name }}{% endif %}</small><strong>{% block header_title %}Workspace{% endblock %}</strong></div><div class="topbar-actions"><button type="button" class="theme-toggle" data-theme-toggle aria-label="Toggle light and dark mode" aria-pressed="false" title="Switch to light mode"><span class="when-dark">{% include "includes/icon.html" with name="sun" %}</span><span class="when-light">{% include "includes/icon.html" with name="moon" %}</span></button><div class="topbar-user"><span class="user-avatar">{% if user.first_name %}{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}{% else %}{{ user.email|first|upper }}{% endif %}</span><span><strong>{{ user.get_full_name|default:user.email }}</strong><small>{% if user.is_superuser %}Super Admin{% elif active_membership %}{{ active_membership.get_role_display }}{% endif %}</small></span></div></div></header>
       <main class="content"><div class="content-inner">{% for message in messages %}<div class="message" role="status"><span>✓</span>{{ message }}</div>{% endfor %}{% block content %}{% endblock %}</div></main>{% include "includes/quick_actions.html" %}
     </div>
   </div>
@@ -53,6 +55,7 @@
   <main class="public-shell"><a class="public-brand" href="/"><span class="brand-mark">K</span><strong>KonnectCore</strong></a>{% for message in messages %}<div class="message" role="status">{{ message }}</div>{% endfor %}{% block public_content %}{% block content_public %}{% endblock %}{% endblock %}</main>
 {% endif %}
 <script src="{% static 'js/farm_location.js' %}" nonce="{{ request.csp_nonce }}" defer></script>
+<script src="{% static 'js/theme.js' %}" nonce="{{ request.csp_nonce }}" defer></script>
 <script nonce="{{ request.csp_nonce }}">
 /* Prevent double submission of POST forms (UAT I-2). Server-side submission keys remain the real guarantee. */
 (function () {
