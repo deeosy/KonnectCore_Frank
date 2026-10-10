@@ -4,20 +4,22 @@ Read this first in any new chat or when a new developer joins. Keep it current: 
 
 **This file is in the code repository, so keep it safe to share with anyone who has repo access.** Server addresses and logins, key locations, server paths, backup locations, organisation details, test accounts and business plans live in the owner's private operations handover, which is kept outside git. Ask the owner for it. Never add those details here.
 
-Last updated: 2026-10-09. Live release at that time: `473e0f5`.
+Last updated: 2026-10-10. Live release at that time: `a89ac21`.
 
 ## Current state
 
 - The MVP is **live** at https://konnectcore.tech for demos and a small friendly trial.
 - All six blocking issues from the original UAT audit are fixed. Later fixes added Cancel invitation, payment allocations, no-store for signed-in pages, Django admin off on the server, and a Content-Security-Policy.
 - Trial feedback items 1 to 9 from the first trial cooperative are live (see Recent releases). Item 10, voice data entry, is **on hold** until real feedback from more organisations.
-- Test suite: **319 tests pass**.
+- Test suite: **326 tests pass**.
 - Real member data: **not yet**. Use made-up data until a data agreement is signed with each organisation.
 
 ## Recent releases
 
 | Release | Date | Contents |
 | --- | --- | --- |
+| `a89ac21` | 2026-10-10 | Zendo-style UI: dark (default) and light theme with a toggle, self-hosted Plus Jakarta Sans and Sora fonts, teal banner on the dashboard, redesigned member profile, KPI icon tiles, initials avatars on the Members list, shared detail-page styles, teal banners on collection, farm, payment and group pages, payment status badge, form labels without colons (site-wide form renderer), lighter Reports layout. No migrations. |
+| `b7191ac` | 2026-10-10 | UI feedback from Dennis: balanced form buttons, disabled placeholders, clickable dashboard cards. Live release before `a89ac21`. |
 | `473e0f5` | 2026-10-08 | Super Admin Create organisation: Generate from name button for the slug (blank slug is generated server-side, with -2, -3 on clashes); currency dropdown limited to GHS, USD and NGN, default GHS. |
 | `a0071d4` | 2026-10-08 | Trial feedback phases 1 to 3: Add wording, menu order, mobile quick-action bar (role-aware), Add Crop farm picker, Use my location on farm forms, farm and crops on Add member, member sorting (Members list and group page), group filter on collections, New member from a group and Save and add members on Create group, 44px tap targets on phones, hashed static files. |
 | `f6c6f50` | before 2026-10-08 | SVG icons, initials avatar, password reset links and mobile UI fixes. Live release before `a0071d4`. |
@@ -46,7 +48,7 @@ Last updated: 2026-10-09. Live release at that time: `473e0f5`.
 6. Check the web logs (migrations, `collectstatic`, Gunicorn workers, no errors), the login page, the headers, that the hashed CSS and JS load, and that `/django-admin/` and `/media/` return 404.
 7. Push `main` and `deploy/production` to `origin` (plain fast-forward, never force).
 
-**Rollback:** extract the previous package, set `RELEASE`, and rebuild `web`. Releases `a0071d4` and `473e0f5` had no migrations, so code rollback alone is enough for them.
+**Rollback:** extract the previous package, set `RELEASE`, and rebuild `web`. Releases `a0071d4`, `473e0f5` and `a89ac21` had no migrations, so code rollback alone is enough for them.
 
 **PowerShell tip:** remote commands containing `$(...)`, `awk` or `${#v}` get mangled by PowerShell. Use single quotes, or send the script base64-encoded and run it with `base64 -d | bash`.
 
