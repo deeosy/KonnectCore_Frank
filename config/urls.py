@@ -2,12 +2,17 @@ from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
 
+from apps.core import views as core_views
 from apps.organisations import views
 
 urlpatterns = [
     path("login/", views.RoleAwareLoginView.as_view(), name="login"),
     path("logout/", views.auth_views.LogoutView.as_view(), name="logout"),
     path("", views.entrypoint, name="entrypoint"),
+    path("robots.txt", core_views.robots_txt, name="robots_txt"),
+    path("sitemap.xml", core_views.sitemap_xml, name="sitemap_xml"),
+    path("favicon.ico", core_views.favicon_ico, name="favicon_ico"),
+    path("site.webmanifest", core_views.web_manifest, name="web_manifest"),
     path("organisations/choose/", views.choose_organisation, name="choose_organisation"),
     path("workspace/", views.workspace, name="workspace"),
     path("workspace/members/", include("apps.members.urls")),

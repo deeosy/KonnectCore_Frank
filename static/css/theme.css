@@ -110,7 +110,7 @@ a:hover{color:var(--kc-accent-strong)}
 .sidebar-brand{border-bottom:1px solid var(--kc-border)}
 .brand-lockup,.brand-lockup:hover,.public-brand,.public-brand:hover{color:var(--kc-fg)}
 .brand-lockup strong{font-family:var(--kc-font-display);font-weight:700;letter-spacing:-.01em}
-.brand-lockup small{color:var(--kc-fg-muted);letter-spacing:.08em}
+.brand-lockup{flex-direction:column;align-items:flex-start;gap:3px}.brand-lockup small{margin-top:0;color:var(--kc-fg-muted);letter-spacing:.08em}
 .brand-mark{border-radius:12px;background:linear-gradient(145deg,#3cddbc,#0f9f7f);color:#0c161d;font-family:var(--kc-font-display);font-weight:700;box-shadow:0 10px 22px -12px rgba(60,221,188,.7)}
 .workspace-chip{border:1px solid var(--kc-border);border-radius:12px;background:var(--kc-card)}
 .workspace-avatar{border-radius:10px;background:var(--kc-accent-soft);color:var(--kc-accent)}

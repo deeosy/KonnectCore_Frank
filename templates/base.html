@@ -6,6 +6,22 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#131e25">
   <title>{% block title %}KonnectCore{% endblock %}</title>
+  {% block meta_robots %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+  <meta name="description" content="{% block meta_description %}KonnectCore is a secure workspace for cooperatives and farmer organisations: members, farms, produce collections, payments and field operations in one place.{% endblock %}">
+  {% block canonical %}{% endblock %}
+  <meta property="og:site_name" content="KonnectCore">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="{% block og_title %}KonnectCore{% endblock %}">
+  <meta property="og:description" content="{% block og_description %}Secure workspace for cooperatives: members, farms, collections, payments and field operations.{% endblock %}">
+  <meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{% static 'img/og-image.png' %}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="KonnectCore logo">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="{% static 'img/favicon.ico' %}" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/favicon-32.png' %}">
+  <link rel="apple-touch-icon" href="{% static 'img/apple-touch-icon.png' %}">
+  <link rel="manifest" href="{% url 'web_manifest' %}">
   <script nonce="{{ request.csp_nonce }}">try{var kcTheme=localStorage.getItem("kc-theme");if(kcTheme==="light"||kcTheme==="dark"){document.documentElement.setAttribute("data-theme",kcTheme);}}catch(e){}</script>
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
   <link rel="stylesheet" href="{% static 'css/theme.css' %}">
@@ -17,8 +33,8 @@
     <aside class="sidebar" aria-label="Primary navigation">
       <div class="sidebar-brand">
         <a href="{% if user.is_superuser %}{% url 'platform_organisations' %}{% elif active_membership.role == 'field_officer' %}{% url 'field_home' %}{% else %}{% url 'workspace' %}{% endif %}" class="brand-lockup">
-          <span class="brand-mark" aria-hidden="true">K</span>
-          <span><strong>KonnectCore</strong><small>Organisation OS</small></span>
+          <img src="{% static 'img/konnectcore-logo.png' %}" alt="KonnectCore" width="147" height="32">
+          <span><small>Organisation OS</small></span>
         </a>
         <label class="nav-close" for="nav-toggle" aria-label="Close navigation">{% include "includes/icon.html" with name="close" %}</label>
       </div>
@@ -52,7 +68,7 @@
     </div>
   </div>
 {% else %}
-  <main class="public-shell"><a class="public-brand" href="/"><span class="brand-mark">K</span><strong>KonnectCore</strong></a>{% for message in messages %}<div class="message" role="status">{{ message }}</div>{% endfor %}{% block public_content %}{% block content_public %}{% endblock %}{% endblock %}</main>
+  <main class="public-shell"><a class="public-brand" href="/"><img src="{% static 'img/konnectcore-logo.png' %}" alt="KonnectCore" width="147" height="32"></a>{% for message in messages %}<div class="message" role="status">{{ message }}</div>{% endfor %}{% block public_content %}{% block content_public %}{% endblock %}{% endblock %}</main>
 {% endif %}
 <script src="{% static 'js/farm_location.js' %}" nonce="{{ request.csp_nonce }}" defer></script>
 <script src="{% static 'js/theme.js' %}" nonce="{{ request.csp_nonce }}" defer></script>
