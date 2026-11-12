@@ -27,6 +27,36 @@
   var row = lat.closest("p") || lat.parentNode;
   row.parentNode.insertBefore(wrap, row);
 
+  // Map View
+  var mapContainer = document.createElement("div");
+  mapContainer.style.height = "300px";
+  mapContainer.style.display = "none";
+  row.parentNode.insertBefore(mapContainer, row.nextSibling);
+  var mapButton = document.createElement("button");
+  mapButton.type = "button";
+  mapButton.className = "button secondary";
+  mapButton.textContent = "Toggle Map View";
+  row.parentNode.insertBefore(mapButton, row.nextSibling);
+
+  var map = null;
+  mapButton.addEventListener("click", function () {
+    if (mapContainer.style.display === "none") {
+      mapContainer.style.display = "block";
+      if (!map) {
+        map = L.map(mapContainer).setView([0, 0], 2);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        var marker = L.marker([0, 0], {draggable: true}).addTo(map);
+        map.on('click', function(e) {
+          marker.setLatLng(e.latlng);
+          lat.value = e.latlng.lat.toFixed(6);
+          lng.value = e.latlng.lng.toFixed(6);
+        });
+      }
+    } else {
+      mapContainer.style.display = "none";
+    }
+  });
+
   var MESSAGES = {
     1: "Location permission was denied. Allow location for this site, or type the coordinates.",
     2: "Your location could not be found. Move to an open area and try again.",

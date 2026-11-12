@@ -87,3 +87,25 @@ class FieldVisit(OrganisationOwnedModel):
 
         if e:
             raise ValidationError(e)
+
+class AdvisoryRecord(OrganisationOwnedModel):
+    visit = models.ForeignKey(FieldVisit, on_delete=models.CASCADE, related_name="advisories")
+    observation = models.TextField()
+    photo = models.ImageField(upload_to="advisories/", blank=True)
+    status = models.CharField(
+        max_length=20,
+        choices=[("requested", "Requested"), ("reviewed", "Reviewed")],
+        default="requested"
+    )
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="reviewed_advisories"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]

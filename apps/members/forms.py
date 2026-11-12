@@ -31,7 +31,10 @@ class MemberForm(forms.ModelForm):
         model = Member
         fields = [
             "first_name", "last_name", "phone", "membership_number",
-            "id_reference", "location", "photo", "status",
+            "id_type", "id_number", "id_front", "id_back",
+            "nok_first_name", "nok_last_name", "nok_relationship",
+            "nok_phone", "nok_address",
+            "location", "photo", "status",
         ]
 
     def __init__(self, *args, organisation=None, **kwargs):

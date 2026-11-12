@@ -22,6 +22,7 @@ urlpatterns = [
     path("workspace/finance/", include("apps.finance.urls")),
     path("field/", include("apps.field.urls")),
     path("workspace/reports/", include("apps.reports.urls")),
+    path("workspace/inputs/", include("apps.inputs.urls")),
     path("workspace/staff/", views.staff_list, name="staff_list"),
     path("workspace/staff/create/", views.staff_create, name="staff_create"),
     path("workspace/staff/invite/", views.staff_invite, name="staff_invite"),

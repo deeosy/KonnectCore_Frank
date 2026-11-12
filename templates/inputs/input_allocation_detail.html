@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Input Allocation Detail{% endblock %}
+{% block header_title %}Input Allocation{% endblock %}
+{% block content %}
+<section class="form-card">
+    <h1>Allocation Detail</h1>
+    <dl>
+        <dt>Member</dt><dd>{{ allocation.member.full_name }}</dd>
+        <dt>Input Type</dt><dd>{{ allocation.get_input_type_display }}</dd>
+        <dt>Quantity</dt><dd>{{ allocation.quantity }}</dd>
+        <dt>Status</dt><dd><span class="status status-{{ allocation.status }}">{{ allocation.get_status_display }}</span></dd>
+        <dt>Requested At</dt><dd>{{ allocation.created_at|date:"M j, Y H:i" }}</dd>
+        {% if allocation.verified_by %}
+        <dt>Verified By</dt><dd>{{ allocation.verified_by.get_full_name|default:allocation.verified_by.email }}</dd>
+        {% endif %}
+    </dl>
+    {% if status_form %}
+    <form method="post" class="stack">
+        {% csrf_token %}
+        {{ status_form.as_p }}
+        <button class="button" type="submit">Update Status</button>
+    </form>
+    {% endif %}
+    <a href="{% url 'input_allocation_list' %}">Back to list</a>
+</section>
+{% endblock %}

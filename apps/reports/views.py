@@ -6,9 +6,11 @@ from django.db.models.functions import Coalesce
 from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.utils.dateparse import parse_date
+from django.utils.timezone import make_naive
 from openpyxl import Workbook
 from apps.collections.models import CollectionRecord
 from apps.finance.models import FinancialRecord
+from apps.inputs.models import InputAllocation
 from apps.farms.models import Crop, Farm
 from apps.groups.models import GroupMemberAssignment,StructureUnit
 from apps.members.models import Member, MemberHistory
@@ -132,11 +134,14 @@ def _rows(request,report):
     if report=="groups":
         qs=StructureUnit.objects.for_organisation(org).select_related("parent","leader","field_officer__user").annotate(total_members=Count("member_assignments"))
         return ["Name","Type","Parent","Leader","Field Officer","Members","Active"],([x.name,x.get_unit_type_display(),x.parent.name if x.parent else "",x.leader.full_name if x.leader else "",str(x.field_officer.user) if x.field_officer else "",x.total_members,"Yes" if x.is_active else "No"] for x in qs)
+    if report=="input_allocations":
+        qs=InputAllocation.objects.for_organisation(org).select_related("member","verified_by")
+        return ["Date","Member","Membership number","Input Type","Quantity","Status","Verified By"],([make_naive(x.created_at),x.member.full_name,x.member.membership_number,x.get_input_type_display(),x.quantity,x.get_status_display(),x.verified_by.get_full_name() if x.verified_by else ""] for x in qs)
     raise ValueError("Unknown report")
 
 @manager_or_admin_required
 def export_report(request,report,format):
-    if report not in {"members","collections","finance","groups"} or format not in {"csv","xlsx"}: return HttpResponse(status=404)
+    if report not in {"members","collections","finance","groups","input_allocations"} or format not in {"csv","xlsx"}: return HttpResponse(status=404)
     headers,rows=_rows(request,report);filename=f"{report}-report.{format}"
     if format=="csv":
         response=HttpResponse(content_type="text/csv");response["Content-Disposition"]=f'attachment; filename="{filename}"';writer=csv.writer(response);writer.writerow(headers);writer.writerows(rows);return response

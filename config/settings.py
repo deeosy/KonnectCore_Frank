@@ -13,7 +13,7 @@ ALLOWED_HOSTS = [x.strip() for x in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost
 INSTALLED_APPS = [
     "django.contrib.admin", "django.contrib.auth", "django.contrib.contenttypes",
     "django.contrib.sessions", "django.contrib.messages", "django.contrib.staticfiles",
-    "apps.core", "apps.accounts", "apps.organisations", "apps.members", "apps.groups", "apps.farms", "apps.collections", "apps.finance", "apps.field", "apps.reports",
+    "apps.core", "apps.accounts", "apps.organisations", "apps.members", "apps.groups", "apps.farms", "apps.collections", "apps.finance", "apps.field", "apps.reports", "apps.inputs",
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",

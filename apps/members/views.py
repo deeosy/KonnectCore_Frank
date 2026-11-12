@@ -108,7 +108,7 @@ def member_list(request):
             | Q(last_name__icontains=query)
             | Q(phone__icontains=query)
             | Q(membership_number__icontains=query)
-            | Q(id_reference__icontains=query)
+            | Q(id_number__icontains=query)
             | Q(location__icontains=query)
         )
     if status in Member.Status.values:

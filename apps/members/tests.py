@@ -66,7 +66,7 @@ class MemberFixture(TestCase):
     def member_payload(self, number="A-002", **overrides):
         data = {
             "first_name": "Abena", "last_name": "Owusu", "phone": "+233200000001",
-            "membership_number": number, "id_reference": "ID-88", "location": "Kumasi",
+            "membership_number": number, "id_number": "ID-88", "location": "Kumasi",
             "status": Member.Status.ACTIVE,
         }
         data.update(overrides)
@@ -140,7 +140,7 @@ class MemberRoleTests(MemberFixture):
 class MemberSearchTests(MemberFixture):
     def test_searches_phone_membership_id_location_and_name(self):
         self.alpha_member.phone = "+233555123"
-        self.alpha_member.id_reference = "NAT-443"
+        self.alpha_member.id_number = "NAT-443"
         self.alpha_member.location = "Tamale North"
         self.alpha_member.save()
         self.login_as(self.alpha_admin, self.alpha)

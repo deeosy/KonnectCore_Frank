@@ -30,10 +30,22 @@
         <dl class="mp-dl">
           <div><dt>Membership number</dt><dd class="cell-mono">{{ member.membership_number }}</dd></div>
           <div><dt>Phone</dt><dd>{{ member.phone|default:"-" }}</dd></div>
-          <div><dt>ID/reference</dt><dd>{{ member.id_reference|default:"-" }}</dd></div>
+          <div><dt>ID type</dt><dd>{{ member.get_id_type_display|default:"-" }}</dd></div>
+          <div><dt>ID number</dt><dd class="cell-mono">{{ member.id_number|default:"-" }}</dd></div>
           <div><dt>Location</dt><dd>{{ member.location|default:"-" }}</dd></div>
           <div><dt>Status</dt><dd><span class="status status-{{ member.status }}">{{ member.get_status_display }}</span></dd></div>
           <div><dt>Registered</dt><dd>{{ member.created_at|date:"M j, Y" }}</dd></div>
+        </dl>
+      </div>
+    </section>
+    <section class="panel">
+      <div class="panel-head"><h2>Next of kin</h2></div>
+      <div class="panel-body">
+        <dl class="mp-dl">
+          <div><dt>Name</dt><dd>{{ member.nok_first_name }} {{ member.nok_last_name }}</dd></div>
+          <div><dt>Relationship</dt><dd>{{ member.nok_relationship|default:"-" }}</dd></div>
+          <div><dt>Phone</dt><dd>{{ member.nok_phone|default:"-" }}</dd></div>
+          <div><dt>Address</dt><dd>{{ member.nok_address|default:"-" }}</dd></div>
         </dl>
       </div>
     </section>
