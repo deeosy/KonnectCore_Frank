@@ -19,6 +19,11 @@ def visit_photo_path(instance, filename):
     """Stores photos taken during field visits: media/organisations/<org_id>/field-visits/<visit_id>/photo.<ext>"""
     return f"organisations/{instance.organisation_id}/field-visits/{instance.pk}/photo{Path(filename).suffix.lower()}"
 
+def advisory_photo_path(instance, filename):
+    """Stores advisory photos in the owning organisation's private media directory."""
+    record_id = instance.pk or uuid.uuid4()
+    return f"organisations/{instance.organisation_id}/advisories/{record_id}/photo{Path(filename).suffix.lower()}"
+
 
 class FieldVisit(OrganisationOwnedModel):
     """
@@ -91,12 +96,13 @@ class FieldVisit(OrganisationOwnedModel):
 class AdvisoryRecord(OrganisationOwnedModel):
     visit = models.ForeignKey(FieldVisit, on_delete=models.CASCADE, related_name="advisories")
     observation = models.TextField()
-    photo = models.ImageField(upload_to="advisories/", blank=True)
+    photo = models.ImageField(upload_to=advisory_photo_path, blank=True)
     status = models.CharField(
         max_length=20,
         choices=[("requested", "Requested"), ("reviewed", "Reviewed")],
         default="requested"
     )
+    review_comment = models.TextField(blank=True)
     reviewed_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -109,3 +115,15 @@ class AdvisoryRecord(OrganisationOwnedModel):
 
     class Meta:
         ordering = ["-created_at"]
+
+    def clean(self):
+        errors = {}
+        if self.visit_id and self.organisation_id and self.visit.organisation_id != self.organisation_id:
+            errors["visit"] = "Visit must belong to the same organisation."
+        if self.reviewed_by_id and self.organisation_id and not OrganisationMembership.objects.filter(
+            organisation_id=self.organisation_id, user_id=self.reviewed_by_id,
+            role__in=(OrganisationMembership.Role.ADMIN, OrganisationMembership.Role.MANAGER),
+        ).exists():
+            errors["reviewed_by"] = "Reviewer must be an Admin or Manager in the same organisation."
+        if errors:
+            raise ValidationError(errors)

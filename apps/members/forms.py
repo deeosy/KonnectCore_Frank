@@ -41,6 +41,16 @@ class MemberForm(forms.ModelForm):
         self.organisation = organisation
         super().__init__(*args, **kwargs)
 
+    def clean(self):
+        cleaned = super().clean()
+        if (
+            cleaned.get("id_number")
+            or cleaned.get("id_front")
+            or cleaned.get("id_back")
+        ) and not cleaned.get("id_type"):
+            self.add_error("id_type", "Choose the type of identification being verified.")
+        return cleaned
+
     def clean_membership_number(self):
         number = normalise_membership_number(self.cleaned_data.get("membership_number"))
         if not number:
@@ -57,11 +67,30 @@ class MemberForm(forms.ModelForm):
             raise forms.ValidationError("Photo must be 5 MB or smaller.")
         return photo
 
+    def clean_id_front(self):
+        image = self.cleaned_data.get("id_front")
+        if image and image.size > MAX_IMAGE_BYTES:
+            raise forms.ValidationError("Front ID image must be 5 MB or smaller.")
+        return image
+
+    def clean_id_back(self):
+        image = self.cleaned_data.get("id_back")
+        if image and image.size > MAX_IMAGE_BYTES:
+            raise forms.ValidationError("Back ID image must be 5 MB or smaller.")
+        return image
+
 
 class MemberDocumentForm(forms.ModelForm):
     class Meta:
         model = MemberDocument
-        fields = ["title", "file"]
+        fields = ["document_type", "title", "file"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["document_type"].required = False
+
+    def clean_document_type(self):
+        return self.cleaned_data.get("document_type") or MemberDocument.DocumentType.OTHER
 
     def clean_file(self):
         uploaded = self.cleaned_data["file"]

@@ -11,6 +11,7 @@ urlpatterns = [
     path("crops/<uuid:crop_id>/edit/", views.crop_edit, name="crop_edit"),
     path("<uuid:farm_id>/", views.farm_detail, name="farm_detail"),
     path("<uuid:farm_id>/edit/", views.farm_edit, name="farm_edit"),
+    path("<uuid:farm_id>/transfer/", views.farm_transfer, name="farm_transfer"),
     path("<uuid:farm_id>/seasons/add/", views.season_create, name="season_create"),
     path("<uuid:farm_id>/seasons/<uuid:season_id>/edit/", views.season_edit, name="season_edit"),
 ]

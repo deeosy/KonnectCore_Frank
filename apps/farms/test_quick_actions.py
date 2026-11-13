@@ -3,6 +3,7 @@ import re
 
 from django.urls import reverse
 
+from .forms import FarmForm
 from .tests import FarmFixture
 
 
@@ -85,6 +86,11 @@ class QuickActionBarTests(FarmFixture):
 
 
 class LocationAndWordingTests(FarmFixture):
+    def test_map_coordinates_are_submitted_as_hidden_farm_fields(self):
+        form = FarmForm(organisation=self.alpha)
+        self.assertEqual(form.fields["latitude"].widget.input_type, "hidden")
+        self.assertEqual(form.fields["longitude"].widget.input_type, "hidden")
+
     def test_location_script_is_loaded_with_the_csp_nonce(self):
         self.login_as(self.admin)
         response = self.client.get(reverse("farm_create"))

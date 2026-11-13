@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Transfer farm ownership · KonnectCore{% endblock %}
+{% block header_title %}Transfer farm ownership{% endblock %}
+{% block content %}
+<section class="form-card">
+  <p class="eyebrow"><a href="{% url 'farm_detail' farm.pk %}">{{ farm.name }}</a></p>
+  <h1>Transfer farm ownership</h1>
+  <p class="muted">Current owner: <strong>{{ farm.member.full_name }}</strong>. The farm and its crop history remain intact. The transfer will be recorded in the ownership history.</p>
+  <form method="post" class="stack">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <div class="form-actions">
+      <a href="{% url 'farm_detail' farm.pk %}">Cancel</a>
+      <button class="button" type="submit">Transfer ownership</button>
+    </div>
+  </form>
+</section>
+{% endblock %}

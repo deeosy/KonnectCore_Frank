@@ -73,6 +73,7 @@ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = True
 X_FRAME_OPTIONS = "DENY"
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 CSRF_TRUSTED_ORIGINS = [x.strip() for x in os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",") if x.strip()]
 
 # Production hardening. Enabled only when DJANGO_SECURE=true (set on the hosted server),
@@ -98,7 +99,6 @@ if SECURE_DEPLOYMENT:
     SECURE_HSTS_INCLUDE_SUBDOMAINS = False
     SECURE_HSTS_PRELOAD = False
     SECURE_CONTENT_TYPE_NOSNIFF = True
-    SECURE_REFERRER_POLICY = "same-origin"
 
 # Django's built-in admin bypasses KonnectCore's organisation and Super Admin privacy rules,
 # so it is off on the hosted server (DJANGO_SECURE=true) unless DJANGO_ADMIN_ENABLED=true.

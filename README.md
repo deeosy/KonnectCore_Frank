@@ -7,12 +7,12 @@ The validation MVP is complete. It provides private organisation workspaces, rol
 ## Current MVP scope
 
 1. **Authentication and tenancy** — email login, private workspaces, controlled onboarding, roles, invitations, and organisation status controls.
-2. **Members** — profiles, search, status, private photos/documents, CSV/XLSX import, and member history.
+2. **Members** — profiles, search, status, Next of Kin details, typed national-ID verification (front/back images with private audit history), private photos/documents, CSV/XLSX import, and member history.
 3. **Groups and structure** — Regions, Districts, Branches, Communities, Groups, leaders, responsible officers, and member assignments.
-4. **Farms and crops** — crop catalogue, farm size/location/GPS, planting periods, seasons, and estimated/actual yields.
+4. **Farms and crops** — crop catalogue, farm size/location/GPS, planting periods, seasons, estimated/actual yields, and recorded ownership transfers that preserve the farm’s history.
 5. **Collections** — produce quantities, grades, prices, calculated values, photos, notes, and recorder attribution.
 6. **Finance** — member payments, dues, contributions, savings, expenses, methods, statuses, references, and outstanding values.
-7. **Field Workspace** — assigned-member search, registration, farm updates, field visits, GPS/photos, and produce entry.
+7. **Field Workspace** — assigned-member search, registration, farm updates, field activity logs, visit GPS/photos, advisory observations, supervisor comments/review, and produce entry.
 8. **Dashboard and reports** — organisation metrics, operational summaries, filters, and CSV/XLSX exports.
 9. **Platform administration** — owner-only organisation list, account details, counts, provisioning, and status management.
 
@@ -36,6 +36,7 @@ The interface uses a consistent green KonnectCore design system with:
 - Consistent typography, forms, buttons, filters, tables, and status badges
 - Responsive desktop, tablet, and mobile layouts
 - Simplified Field Officer navigation with large mobile actions
+- Field Activity history with supervisor advisory review
 - Polished login and platform-administration surfaces
 
 Django templates provide the interface; shared presentation rules live in `static/css/app.css`.

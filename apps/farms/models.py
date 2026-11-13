@@ -1,6 +1,7 @@
 import uuid
 from decimal import Decimal
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 
@@ -132,6 +133,65 @@ class Farm(OrganisationOwnedModel):
 
     def __str__(self):
         return f"{self.name} — {self.member.full_name}"
+
+
+class FarmOwnershipTransfer(OrganisationOwnedModel):
+    farm = models.ForeignKey(Farm, on_delete=models.PROTECT, related_name="ownership_transfers")
+    previous_member = models.ForeignKey(
+        Member,
+        on_delete=models.PROTECT,
+        related_name="farms_transferred_from",
+    )
+    successor_member = models.ForeignKey(
+        Member,
+        on_delete=models.PROTECT,
+        related_name="farms_transferred_to",
+    )
+    transferred_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="farm_ownership_transfers",
+    )
+    reason = models.TextField()
+    transferred_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-transferred_at", "-pk"]
+        indexes = [models.Index(fields=["organisation", "farm", "transferred_at"])]
+
+    def clean(self):
+        errors = {}
+        if self.farm_id and self.organisation_id and self.farm.organisation_id != self.organisation_id:
+            errors["farm"] = "Farm must belong to the same organisation."
+        for field in ("previous_member", "successor_member"):
+            member_id = getattr(self, f"{field}_id")
+            if member_id and self.organisation_id:
+                member = getattr(self, field)
+                if member.organisation_id != self.organisation_id:
+                    errors[field] = "Member must belong to the same organisation."
+        if self.previous_member_id and self.previous_member_id == self.successor_member_id:
+            errors["successor_member"] = "Choose a different successor member."
+        if self.farm_id and self.successor_member_id and self.farm.member_id != self.successor_member_id:
+            errors["successor_member"] = "The farm must be assigned to the successor member."
+        if self.successor_member_id and self.successor_member.status != Member.Status.ACTIVE:
+            errors["successor_member"] = "Successor must be an active member."
+        if self.transferred_by_id and self.organisation_id:
+            from apps.organisations.models import OrganisationMembership
+
+            if not OrganisationMembership.objects.filter(
+                organisation_id=self.organisation_id,
+                user_id=self.transferred_by_id,
+                role__in=(
+                    OrganisationMembership.Role.ADMIN,
+                    OrganisationMembership.Role.MANAGER,
+                ),
+                is_active=True,
+            ).exists():
+                errors["transferred_by"] = "Transfer must be recorded by an active Admin or Manager."
+        if not self.reason.strip():
+            errors["reason"] = "A transfer reason is required."
+        if errors:
+            raise ValidationError(errors)
 
 
 # ==============================================================================

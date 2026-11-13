@@ -11,8 +11,8 @@ from apps.members.models import Member
 from apps.organisations.middleware import ActiveOrganisationMiddleware
 from apps.organisations.models import Organisation, OrganisationMembership
 
-from .forms import FarmCropSeasonForm, FarmForm
-from .models import Crop, Farm, FarmCropSeason
+from .forms import FarmCropSeasonForm, FarmForm, FarmOwnershipTransferForm
+from .models import Crop, Farm, FarmCropSeason, FarmOwnershipTransfer
 
 User = get_user_model()
 
@@ -147,6 +147,67 @@ class FarmRoleAndWorkflowTests(FarmFixture):
             self.assertRedirects(self.client.get(url), reverse("field_home"), fetch_redirect_response=False)
         for url in (reverse("farm_create"), reverse("farm_edit", args=[self.alpha_farm.pk]), reverse("crop_create"), reverse("season_create", args=[self.alpha_farm.pk])):
             self.assertEqual(self.client.get(url).status_code, 403)
+        self.assertEqual(self.client.get(reverse("farm_transfer", args=[self.alpha_farm.pk])).status_code, 403)
+
+    def test_owner_transfer_records_chain_and_preserves_crop_history(self):
+        successor = self.member(self.alpha, self.admin, "A-F02", "Kofi", "Asare")
+        next_successor = self.member(self.alpha, self.admin, "A-F03", "Akua", "Boateng")
+        self.login_as(self.manager)
+
+        response = self.client.post(
+            reverse("farm_transfer", args=[self.alpha_farm.pk]),
+            {"successor_member": str(successor.pk), "reason": "Ownership inherited by family."},
+        )
+        self.assertRedirects(response, reverse("farm_detail", args=[self.alpha_farm.pk]))
+        self.alpha_farm.refresh_from_db()
+        self.assertEqual(self.alpha_farm.member, successor)
+        self.assertEqual(self.alpha_farm.crop_seasons.get(), self.season)
+        first_transfer = FarmOwnershipTransfer.objects.get(farm=self.alpha_farm)
+        self.assertEqual(first_transfer.previous_member, self.alpha_member)
+        self.assertEqual(first_transfer.successor_member, successor)
+        self.assertEqual(first_transfer.transferred_by, self.manager)
+        self.assertEqual(first_transfer.reason, "Ownership inherited by family.")
+
+        response = self.client.post(
+            reverse("farm_transfer", args=[self.alpha_farm.pk]),
+            {"successor_member": str(next_successor.pk), "reason": "Second succession."},
+        )
+        self.assertRedirects(response, reverse("farm_detail", args=[self.alpha_farm.pk]))
+        transfers = list(FarmOwnershipTransfer.objects.filter(farm=self.alpha_farm).order_by("transferred_at", "pk"))
+        self.assertEqual(len(transfers), 2)
+        self.assertEqual(transfers[1].previous_member, successor)
+        self.assertEqual(transfers[1].successor_member, next_successor)
+        self.assertContains(self.client.get(reverse("farm_detail", args=[self.alpha_farm.pk])), "Second succession.")
+
+    def test_owner_transfer_rejects_cross_tenant_and_duplicate_farm_name(self):
+        self.login_as(self.admin)
+        response = self.client.post(
+            reverse("farm_transfer", args=[self.alpha_farm.pk]),
+            {"successor_member": str(self.beta_member.pk), "reason": "Invalid tenant."},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(FarmOwnershipTransfer.objects.exists())
+
+        successor = self.member(self.alpha, self.admin, "A-F02", "Kofi", "Asare")
+        Farm.objects.create(organisation=self.alpha, member=successor, name=self.alpha_farm.name)
+        response = self.client.post(
+            reverse("farm_transfer", args=[self.alpha_farm.pk]),
+            {"successor_member": str(successor.pk), "reason": "Duplicate farm name."},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "already exists")
+        self.alpha_farm.refresh_from_db()
+        self.assertEqual(self.alpha_farm.member, self.alpha_member)
+        self.assertFalse(FarmOwnershipTransfer.objects.exists())
+
+    def test_transfer_form_only_offers_active_members_of_the_current_tenant(self):
+        inactive = self.member(self.alpha, self.admin, "A-F02", "Inactive", "Member")
+        inactive.status = Member.Status.INACTIVE
+        inactive.save(update_fields=["status"])
+        form = FarmOwnershipTransferForm(organisation=self.alpha, current_member=self.alpha_member)
+        self.assertNotIn(self.alpha_member, form.fields["successor_member"].queryset)
+        self.assertNotIn(inactive, form.fields["successor_member"].queryset)
+        self.assertNotIn(self.beta_member, form.fields["successor_member"].queryset)
 
     def test_admin_registers_farm_and_member_query_preselects_safely(self):
         self.login_as(self.admin)

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Field Activity · KonnectCore{% endblock %}
+{% block header_title %}Field Activity{% endblock %}
+{% block content %}
+<div class="field-shell">
+  <div class="page-head">
+    <div>
+      <p class="eyebrow">Field operations</p>
+      <h1>My field activity</h1>
+      <p class="muted">Review your recorded visits and advisory notes for assigned members.</p>
+    </div>
+    <a class="button secondary" href="{% url 'field_home' %}">Assigned members</a>
+  </div>
+
+  <section class="card">
+    <h2>Record an activity</h2>
+    <p class="muted">Choose an assigned member, then record the visit, observation and any supporting photo.</p>
+    <details>
+      <summary>Choose an assigned member</summary>
+      <div class="stack">
+    {% for member in members %}
+      <p><a class="button secondary" href="{% url 'field_visit_add' member.pk %}">Record activity for {{ member.full_name }}</a></p>
+    {% empty %}
+      <p class="muted">No assigned members are available yet. Ask an Admin or Manager to assign members to your group.</p>
+    {% endfor %}
+      </div>
+    </details>
+  </section>
+
+  <section class="card">
+    <h2>Activity history</h2>
+    {% for visit in visits %}
+      <article class="field-visit">
+        <p><strong><a href="{% url 'field_member_detail' visit.member.pk %}">{{ visit.member.full_name }}</a></strong> · {{ visit.visit_date|date:"M j, Y" }}</p>
+        <p>{{ visit.notes|linebreaksbr }}</p>
+        {% if visit.photo %}<p><a href="{% url 'field_visit_photo' visit.pk %}">View visit photo</a></p>{% endif %}
+        {% for advisory in visit.advisories.all %}
+          <div class="card">
+            <p><strong>Observation</strong> · <span class="status status-{{ advisory.status }}">{{ advisory.get_status_display }}</span></p>
+            <p>{{ advisory.observation|linebreaksbr }}</p>
+            {% if advisory.photo %}<p><a href="{% url 'field_advisory_photo' advisory.pk %}">View observation photo</a></p>{% endif %}
+            {% if advisory.review_comment %}<p><strong>Supervisor comment:</strong> {{ advisory.review_comment|linebreaksbr }}</p>{% endif %}
+          </div>
+        {% endfor %}
+      </article>
+    {% empty %}
+      <p class="muted">You haven’t recorded any field activities yet.</p>
+    {% endfor %}
+  </section>
+</div>
+{% endblock %}

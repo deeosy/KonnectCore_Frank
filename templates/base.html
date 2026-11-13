@@ -26,7 +26,6 @@
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
   <link rel="stylesheet" href="{% static 'css/theme.css' %}">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 </head>
 <body class="{% if user.is_authenticated %}is-authenticated{% else %}is-public{% endif %}">
 {% if user.is_authenticated %}
@@ -46,6 +45,7 @@
         <p class="nav-label">Workspace</p>
         {% if active_membership.role == 'field_officer' %}
         <a class="nav-item active" href="{% url 'field_home' %}"><span class="nav-icon">{% include "includes/icon.html" with name="field" %}</span>Field Workspace</a>
+        <a class="nav-item {% if request.resolver_match.url_name == 'field_activity' %}active{% endif %}" href="{% url 'field_activity' %}"><span class="nav-icon">{% include "includes/icon.html" with name="field" %}</span>Field Activity</a>
         {% else %}
         <a class="nav-item {% if request.resolver_match.url_name == 'dashboard' or request.resolver_match.url_name == 'workspace' %}active{% endif %}" href="{% url 'dashboard' %}"><span class="nav-icon">{% include "includes/icon.html" with name="dashboard" %}</span>Dashboard</a>
         <a class="nav-item {% if 'member' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'member_list' %}"><span class="nav-icon">{% include "includes/icon.html" with name="members" %}</span>Members</a>
@@ -55,6 +55,7 @@
         <a class="nav-item {% if 'farm' in request.resolver_match.url_name or 'crop' in request.resolver_match.url_name or 'season' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'farm_list' %}"><span class="nav-icon">{% include "includes/icon.html" with name="farms" %}</span>Farms &amp; Crops</a>
         <a class="nav-item {% if 'structure' in request.resolver_match.url_name or 'assignment' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'structure_list' %}"><span class="nav-icon">{% include "includes/icon.html" with name="groups" %}</span>Groups</a>
         <a class="nav-item {% if 'field_' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'field_home' %}"><span class="nav-icon">{% include "includes/icon.html" with name="field" %}</span>Field Workspace</a>
+        <a class="nav-item {% if 'field_advisory_review' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'field_advisory_review_list' %}"><span class="nav-icon">{% include "includes/icon.html" with name="field" %}</span>Advisory Review</a>
         <a class="nav-item {% if 'report' in request.resolver_match.url_name and request.resolver_match.url_name != 'dashboard' %}active{% endif %}" href="{% url 'reports_home' %}"><span class="nav-icon">{% include "includes/icon.html" with name="reports" %}</span>Reports</a>
         {% endif %}
         {% if active_membership.role == 'admin' %}<p class="nav-label nav-label-spaced">Administration</p><a class="nav-item {% if 'staff_' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'staff_list' %}"><span class="nav-icon">{% include "includes/icon.html" with name="settings" %}</span>Staff / Settings</a>{% endif %}
@@ -73,7 +74,8 @@
 {% else %}
   <main class="public-shell"><a class="public-brand" href="/"><img src="{% static 'img/konnectcore-logo.png' %}" alt="KonnectCore" width="147" height="32"></a>{% for message in messages %}<div class="message" role="status">{{ message }}</div>{% endfor %}{% block public_content %}{% block content_public %}{% endblock %}{% endblock %}</main>
 {% endif %}
-<script src="{% static 'js/farm_location.js' %}" nonce="{{ request.csp_nonce }}" defer></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="" nonce="{{ request.csp_nonce }}"></script>
+	<script src="{% static 'js/farm_location.js' %}" nonce="{{ request.csp_nonce }}" defer></script>
 <script src="{% static 'js/theme.js' %}" nonce="{{ request.csp_nonce }}" defer></script>
 <script nonce="{{ request.csp_nonce }}">
 /* Prevent double submission of POST forms (UAT I-2). Server-side submission keys remain the real guarantee. */

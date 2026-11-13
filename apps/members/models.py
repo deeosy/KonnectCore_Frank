@@ -26,6 +26,16 @@ def member_id_photo_path(instance, filename):
     return f"organisations/{instance.organisation_id}/members/{instance.pk}/id_photo{suffix}"
 
 
+def member_id_front_path(instance, filename):
+    suffix = Path(filename).suffix.lower()
+    return f"organisations/{instance.organisation_id}/members/{instance.pk}/id_front{suffix}"
+
+
+def member_id_back_path(instance, filename):
+    suffix = Path(filename).suffix.lower()
+    return f"organisations/{instance.organisation_id}/members/{instance.pk}/id_back{suffix}"
+
+
 def member_document_path(instance, filename):
     """Stores documents in: media/organisations/<org_id>/members/<member_id>/documents/<doc_id>.<ext>"""
     suffix = Path(filename).suffix.lower()
@@ -64,8 +74,8 @@ class Member(OrganisationOwnedModel):
     # ID card verification (Phase 1).
     id_type = models.CharField(max_length=20, choices=IDType.choices, blank=True)
     id_number = models.CharField(max_length=100, blank=True)
-    id_front = models.ImageField(upload_to=member_id_photo_path, blank=True)
-    id_back = models.ImageField(upload_to=member_id_photo_path, blank=True)
+    id_front = models.ImageField(upload_to=member_id_front_path, blank=True)
+    id_back = models.ImageField(upload_to=member_id_back_path, blank=True)
 
     # Next of Kin / Succession management (Phase 1).
     nok_first_name = models.CharField("Next Of Kin (Nok) first name", max_length=100, blank=True)
@@ -142,9 +152,16 @@ class Member(OrganisationOwnedModel):
 # = : Allows storing multiple files (e.g., ID photos, agreements) per Member.
 # ==============================================================================
 class MemberDocument(OrganisationOwnedModel):
+    class DocumentType(models.TextChoices):
+        VOTER_ID = "voter_id", "Voter ID"
+        NHIS = "nhis", "NHIS"
+        GHANA_CARD = "ghana_card", "Ghana Card"
+        OTHER = "other", "Other document"
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name="documents")
     title = models.CharField(max_length=160)
+    document_type = models.CharField(max_length=20, choices=DocumentType.choices, default=DocumentType.OTHER)
     file = models.FileField(upload_to=member_document_path)
 
     uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="member_documents_uploaded")
@@ -172,6 +189,7 @@ class MemberHistory(OrganisationOwnedModel):
         CREATED = "created", "Created"
         UPDATED = "updated", "Updated"
         DOCUMENT_ADDED = "document_added", "Document added"
+        ID_VERIFICATION = "id_verification", "ID Verification"
         IMPORTED = "imported", "Imported"
         ARCHIVED = "archived", "Archived"
         RESTORED = "restored", "Restored"

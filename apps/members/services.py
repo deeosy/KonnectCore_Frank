@@ -18,7 +18,6 @@ def member_snapshot(member):
         "last_name": member.last_name,
         "phone": member.phone,
         "membership_number": member.membership_number,
-        "id_number": member.id_number,
         "location": member.location,
         "status": member.status,
     }

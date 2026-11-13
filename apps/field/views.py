@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
+from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404,redirect,render
 import mimetypes
@@ -17,7 +18,7 @@ from apps.organisations.decorators import organisation_required, manager_or_admi
 from apps.organisations.models import OrganisationMembership
 from apps.organisations.scope import visible_members
 from apps.core.submissions import SubmissionConflict,save_once
-from .forms import FieldVisitForm, AdvisoryRecordForm
+from .forms import FieldVisitForm, AdvisoryRecordForm, AdvisoryReviewForm
 
 def assigned_members(request):
  """Field Workspace member scope; delegates to the single owner in organisations.scope."""
@@ -37,6 +38,14 @@ def home(request):
   # Only visits this officer recorded, for members still within their scope.
   recent_visits=FieldVisit.objects.for_organisation(request.organisation).filter(recorded_by=request.user,member_id__in=visible_members(request).values('pk')).select_related('member')[:5]
  return render(request,'field/home.html',{'members':qs,'query':q,'recent_visits':recent_visits})
+
+@field_only
+def activity_workspace(request):
+ visits=FieldVisit.objects.for_organisation(request.organisation).filter(
+  recorded_by=request.user,member_id__in=visible_members(request).values("pk")
+ ).select_related("member").prefetch_related("advisories").order_by("-visit_date","-created_at")
+ return render(request,"field/activity.html",{"visits":visits,"members":visible_members(request)})
+
 @field_only
 def register_member(request):
  form=MemberForm(request.POST or None,request.FILES or None,organisation=request.organisation)
@@ -59,9 +68,10 @@ def visit_add(request,member_id):
  advisory_form=AdvisoryRecordForm(request.POST or None, request.FILES or None)
  if request.method=='POST' and form.is_valid() and advisory_form.is_valid():
   try:
-   visit,created=save_once(form,organisation=request.organisation,actor=request.user)
-   if advisory_form.cleaned_data['observation']:
-       advisory=advisory_form.save(commit=False);advisory.visit=visit;advisory.organisation=request.organisation;advisory.save()
+   with transaction.atomic():
+    visit,created=save_once(form,organisation=request.organisation,actor=request.user)
+    if created and (advisory_form.cleaned_data['observation'] or advisory_form.cleaned_data['photo']):
+     advisory=advisory_form.save(commit=False);advisory.visit=visit;advisory.organisation=request.organisation;advisory.full_clean();advisory.save()
   except SubmissionConflict as exc:
    form.add_error(None,str(exc))
   else:
@@ -90,3 +100,51 @@ def visit_photo(request,visit_id):
  if not visit.photo:raise Http404('Visit has no photo.')
  content_type=mimetypes.guess_type(visit.photo.name)[0] or 'application/octet-stream'
  return FileResponse(visit.photo.open('rb'),content_type=content_type)
+
+@organisation_required
+def advisory_photo(request,advisory_id):
+ advisory=get_object_or_404(
+  AdvisoryRecord.objects.for_organisation(request.organisation).filter(
+   visit__member_id__in=visible_members(request).values("pk")
+  ),
+  pk=advisory_id,
+ )
+ if not advisory.photo:
+  raise Http404("Advisory has no photo.")
+ content_type=mimetypes.guess_type(advisory.photo.name)[0] or "application/octet-stream"
+ return FileResponse(advisory.photo.open("rb"),content_type=content_type)
+
+@manager_or_admin_required
+def advisory_review_list(request):
+ advisories=AdvisoryRecord.objects.for_organisation(request.organisation).select_related(
+  "visit__member","visit__recorded_by","reviewed_by"
+ )
+ return render(request,"field/review_list.html",{"advisories":advisories})
+
+@manager_or_admin_required
+def advisory_review_detail(request,advisory_id):
+ advisory=get_object_or_404(
+  AdvisoryRecord.objects.for_organisation(request.organisation).select_related("visit__member","visit__recorded_by"),
+  pk=advisory_id,
+ )
+ form=AdvisoryReviewForm(request.POST or None,instance=advisory)
+ if request.method=="POST":
+  action=request.POST.get("action")
+  if action not in {"comment","review"}:
+   form.add_error(None,"Choose whether to save a comment or mark this advisory reviewed.")
+  elif form.is_valid():
+   if action=="comment" and not form.cleaned_data["review_comment"].strip():
+    form.add_error("review_comment","Enter a comment before saving.")
+   else:
+    reviewed_fields=["review_comment","reviewed_by","updated_at"]
+    if action=="review":
+     advisory.status="reviewed"
+     reviewed_fields.append("status")
+    advisory.reviewed_by=request.user
+    form.save()
+    advisory.save(update_fields=reviewed_fields)
+    messages.success(request,"Supervisor comment saved." if action=="comment" else "Advisory marked as reviewed.")
+    if action=="review":
+     return redirect("field_advisory_review_list")
+    return redirect("field_advisory_review_detail",advisory_id=advisory.pk)
+ return render(request,"field/review_detail.html",{"advisory":advisory,"form":form})
