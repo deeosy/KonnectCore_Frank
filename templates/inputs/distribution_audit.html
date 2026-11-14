@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Distribution audit · KonnectCore{% endblock %}
+{% block header_title %}Fertilizer Distribution{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Reports</p>
+    <h1>Distribution audit</h1>
+    <p class="muted">Total allocations compared with deliveries, grouped by region and group.</p>
+  </div>
+  <div class="actions">
+    <a class="button secondary" href="{% url 'input_allocation_list' %}">All allocations</a>
+    <a class="button secondary" href="{% url 'export_report' 'distribution_audit' 'xlsx' %}">Export XLSX</a>
+    <a class="button secondary" href="{% url 'export_report' 'distribution_audit' 'csv' %}">Export CSV</a>
+  </div>
+</div>
+
+<section class="metric-grid">
+  <div class="metric-card accent"><span class="metric-label">Allocations</span><strong>{{ totals.total }}</strong><small>{{ totals.requested }} awaiting verification</small></div>
+  <div class="metric-card"><span class="metric-label">Verified</span><strong>{{ totals.verified }}</strong><small>Ready for delivery</small></div>
+  <div class="metric-card"><span class="metric-label">Delivered</span><strong>{{ totals.delivered }}</strong><small>{{ totals.partially_delivered }} partially delivered</small></div>
+  <div class="metric-card"><span class="metric-label">Rejected</span><strong>{{ totals.rejected }}</strong><small>Not fulfilled</small></div>
+  <div class="metric-card"><span class="metric-label">Quantity allocated</span><strong>{{ totals.quantity }}</strong><small>Across all requests</small></div>
+  <div class="metric-card"><span class="metric-label">Quantity delivered</span><strong>{{ totals.delivered_quantity }}</strong><small>Fully delivered only</small></div>
+</section>
+
+<section class="report-section">
+  <div class="section-head"><h2>By region</h2><span class="status">Allocations vs deliveries</span></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Region</th><th>Allocations</th><th>Requested</th><th>Verified</th><th>Partially delivered</th><th>Delivered</th><th>Rejected</th><th>Quantity allocated</th><th>Quantity delivered</th></tr></thead>
+      <tbody>
+        {% for row in region_rows %}
+        <tr>
+          <td><strong>{{ row.region }}</strong></td>
+          <td>{{ row.total }}</td>
+          <td>{{ row.requested }}</td>
+          <td>{{ row.verified }}</td>
+          <td>{{ row.partially_delivered }}</td>
+          <td>{{ row.delivered }}</td>
+          <td>{{ row.rejected }}</td>
+          <td>{{ row.quantity }}</td>
+          <td>{{ row.delivered_quantity }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="9"><div class="empty">No input allocations recorded yet.</div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="report-section">
+  <div class="section-head"><h2>By group</h2><span class="status">Region / group detail</span></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Region</th><th>Group</th><th>Allocations</th><th>Requested</th><th>Verified</th><th>Partially delivered</th><th>Delivered</th><th>Rejected</th><th>Quantity allocated</th><th>Quantity delivered</th></tr></thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td>{{ row.region }}</td>
+          <td><strong>{{ row.group }}</strong></td>
+          <td>{{ row.total }}</td>
+          <td>{{ row.requested }}</td>
+          <td>{{ row.verified }}</td>
+          <td>{{ row.partially_delivered }}</td>
+          <td>{{ row.delivered }}</td>
+          <td>{{ row.rejected }}</td>
+          <td>{{ row.quantity }}</td>
+          <td>{{ row.delivered_quantity }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="10"><div class="empty">No input allocations recorded yet.</div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

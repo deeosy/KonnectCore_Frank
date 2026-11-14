@@ -3,10 +3,12 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
+from django.utils.dateparse import parse_date
 
 from apps.members.models import Member
 from apps.organisations.decorators import manager_or_admin_required, organisation_required
-from apps.organisations.scope import operational_staff_required
+from apps.organisations.scope import is_field_officer, operational_staff_required, visible_members
 
 from .forms import CropForm, FarmCropSeasonForm, FarmForm, FarmOwnershipTransferForm
 from .models import Crop, Farm, FarmCropSeason, FarmOwnershipTransfer
@@ -24,6 +26,39 @@ def farm_list(request):
     if selected_crop:
         farms = farms.filter(crop_seasons__crop_id=selected_crop).distinct()
     return render(request, "farms/farm_list.html", {"farms": farms, "crops": crops, "query": query, "selected_crop": selected_crop})
+
+
+@organisation_required
+def harvest_coordination(request):
+    """Shared machinery dashboard: nearby farmers with overlapping harvest dates.
+
+    Admins and Managers see the whole organisation. Field Officers only see
+    farmers in their assigned groups.
+    """
+    organisation = request.organisation
+    crops = Crop.objects.for_organisation(organisation).filter(is_active=True)
+    crop_id = request.GET.get("crop", "").strip()
+    selected_crop = next((crop for crop in crops if str(crop.pk) == crop_id), None)
+    reference_date = parse_date(request.GET.get("date", "").strip()) or timezone.localdate()
+    member_ids = visible_members(request).values("pk") if is_field_officer(request) else None
+    groups = FarmCropSeason.harvest_groups(
+        organisation,
+        crop=selected_crop,
+        reference_date=reference_date,
+        window_days=7,
+        member_ids=member_ids,
+    )
+    return render(
+        request,
+        "farms/harvest_coordination.html",
+        {
+            "groups": groups,
+            "crops": crops,
+            "selected_crop": selected_crop,
+            "reference_date": reference_date,
+            "window_days": 7,
+        },
+    )
 
 
 @operational_staff_required

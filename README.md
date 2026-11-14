@@ -43,6 +43,8 @@ Django templates provide the interface; shared presentation rules live in `stati
 
 ## Requirements
 
+For copy-ready commands covering local run, tests, and production, see [`RUNBOOK.md`](RUNBOOK.md).
+
 ### Docker development (recommended)
 
 - Docker Desktop

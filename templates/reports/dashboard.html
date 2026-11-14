@@ -2,26 +2,130 @@
 {% block title %}Dashboard · KonnectCore{% endblock %}
 {% block header_title %}Dashboard{% endblock %}
 {% block content %}
-<div class="page-head hero"><div><p class="eyebrow">{{ active_organisation.name }}</p><h1>Good to see you, {{ user.first_name|default:"there" }}</h1><p class="muted">Here is what is happening across {{ active_organisation.name }}.</p></div><div class="actions"><a class="button secondary" href="{% url 'reports_home' %}">View reports</a>{% if active_membership.role == 'admin' or active_membership.role == 'manager' %}<a class="button" href="{% url 'member_create' %}">Add member</a>{% endif %}</div></div>
+<div class="page-head hero">
+  <div>
+    <p class="eyebrow">{{ active_organisation.name }}</p>
+    <h1>Good to see you, {{ user.first_name|default:"there" }}</h1>
+    <p class="muted">Here is what is happening across {{ active_organisation.name }}.</p>
+  </div>
+  <div class="actions"><a class="button secondary" href="{% url 'reports_home' %}">View reports</a>{% if active_membership.role == 'admin' or active_membership.role == 'manager' %}<a class="button"
+      href="{% url 'member_create' %}">Add member</a>{% endif %}</div>
+</div>
 <div class="metric-grid">
-  <a class="metric-card metric-link accent" href="{% url 'member_list' %}"><span class="metric-icon tone-teal">{% include "includes/icon.html" with name="members" %}</span><span class="metric-label">Total Members</span><strong>{{ metrics.members }}</strong><small>{{ metrics.active_members }} currently active</small></a>
-  <a class="metric-card metric-link" href="{% url 'member_list' %}?status=active"><span class="metric-icon tone-blue">{% include "includes/icon.html" with name="members" %}</span><span class="metric-label">Active Members</span><strong>{{ metrics.active_members }}</strong><small>In good standing</small></a>
+  <a class="metric-card metric-link accent" href="{% url 'member_list' %}"><span class="metric-icon tone-teal">{% include "includes/icon.html" with name="members" %}</span><span class="metric-label">Total
+      Members</span><strong>{{ metrics.members }}</strong><small>{{ metrics.active_members }} currently
+      active</small></a>
+  <a class="metric-card metric-link" href="{% url 'member_list' %}?status=active"><span class="metric-icon tone-blue">{% include "includes/icon.html" with name="members" %}</span><span class="metric-label">Active
+      Members</span><strong>{{ metrics.active_members }}</strong><small>In good standing</small></a>
   <a class="metric-card metric-link" href="{% url 'structure_list' %}"><span class="metric-icon tone-violet">{% include "includes/icon.html" with name="groups" %}</span><span class="metric-label">Total Groups</span><strong>{{ metrics.groups }}</strong><small>Active member groups</small></a>
   <a class="metric-card metric-link" href="{% url 'farm_list' %}"><span class="metric-icon tone-teal">{% include "includes/icon.html" with name="farms" %}</span><span class="metric-label">Total Farms</span><strong>{{ metrics.farms }}</strong><small>Registered farms</small></a>
-  <a class="metric-card metric-link" href="{% url 'collection_list' %}"><span class="metric-icon tone-amber">{% include "includes/icon.html" with name="collections" %}</span><span class="metric-label">Produce Collected</span><strong>{{ metrics.collections }}</strong><small>Collection records</small></a>
-  <a class="metric-card metric-link" href="{% url 'finance_list' %}?type=member_payment"><span class="metric-icon tone-teal">{% include "includes/icon.html" with name="payments" %}</span><span class="metric-label">Paid to members</span><strong>{{ metrics.paid_to_members|money:active_organisation.currency }}</strong><small>Money actually paid out to members</small></a>
-  <a class="metric-card metric-link" href="{% url 'finance_list' %}?type=member_payment"><span class="metric-icon tone-amber">{% include "includes/icon.html" with name="payments" %}</span><span class="metric-label">Owed to members</span><strong>{{ metrics.owed_to_members|money:active_organisation.currency }}</strong><small>Scheduled payments not yet paid</small></a>
-  <a class="metric-card metric-link" href="{% url 'finance_list' %}"><span class="metric-icon tone-blue">{% include "includes/icon.html" with name="payments" %}</span><span class="metric-label">Received from members</span><strong>{{ metrics.received_from_members|money:active_organisation.currency }}</strong><small>Dues, contributions and savings paid</small></a>
-  <a class="metric-card metric-link" href="{% url 'finance_list' %}"><span class="metric-icon tone-rose">{% include "includes/icon.html" with name="payments" %}</span><span class="metric-label">Owed by members</span><strong>{{ metrics.owed_by_members|money:active_organisation.currency }}</strong><small>Dues, contributions and savings unpaid</small></a>
-  <a class="metric-card metric-link" href="{% url 'finance_list' %}?type=expense"><span class="metric-icon tone-slate">{% include "includes/icon.html" with name="payments" %}</span><span class="metric-label">Expenses paid</span><strong>{{ metrics.expenses_paid|money:active_organisation.currency }}</strong><small>Organisation expenses</small></a>
+  <a class="metric-card metric-link" href="{% url 'collection_list' %}"><span class="metric-icon tone-amber">{% include "includes/icon.html" with name="collections" %}</span><span class="metric-label">Produce
+      Collected</span><strong>{{ metrics.collections }}</strong><small>Collection records</small></a>
+  <a class="metric-card metric-link" href="{% url 'finance_list' %}?type=member_payment"><span
+      class="metric-icon tone-teal">{% include "includes/icon.html" with name="payments" %}</span><span
+      class="metric-label">Paid to members</span><strong>{{ metrics.paid_to_members|money:active_organisation.currency }}</strong><small>Money actually paid out to members</small></a>
+  <a class="metric-card metric-link" href="{% url 'finance_list' %}?type=member_payment"><span
+      class="metric-icon tone-amber">{% include "includes/icon.html" with name="payments" %}</span><span
+      class="metric-label">Owed to members</span><strong>{{ metrics.owed_to_members|money:active_organisation.currency }}</strong><small>Scheduled payments not yet paid</small></a>
+  <a class="metric-card metric-link" href="{% url 'finance_list' %}"><span class="metric-icon tone-blue">{% include "includes/icon.html" with name="payments" %}</span><span class="metric-label">Received from members</span><strong>{{ metrics.received_from_members|money:active_organisation.currency }}</strong><small>Dues,
+      contributions and savings paid</small></a>
+  <a class="metric-card metric-link" href="{% url 'finance_list' %}"><span class="metric-icon tone-rose">{% include "includes/icon.html" with name="payments" %}</span><span class="metric-label">Owed by members</span><strong>{{ metrics.owed_by_members|money:active_organisation.currency }}</strong><small>Dues, contributions and savings
+      unpaid</small></a>
+  <a class="metric-card metric-link" href="{% url 'finance_list' %}?type=expense"><span
+      class="metric-icon tone-slate">{% include "includes/icon.html" with name="payments" %}</span><span
+      class="metric-label">Expenses paid</span><strong>{{ metrics.expenses_paid|money:active_organisation.currency }}</strong><small>Organisation expenses</small></a>
 </div>
 <div class="dashboard-grid">
-  <section class="panel"><div class="panel-head"><h2>Recent produce collections</h2><a href="{% url 'collection_list' %}">View all →</a></div><div class="table-wrap" style="border:0;border-radius:0;margin:0"><table class="compact-table"><thead><tr><th>Member</th><th>Crop</th><th>Quantity</th><th>Value</th></tr></thead><tbody>{% for record in recent_collections %}<tr><td><a href="{% url 'collection_detail' record.id %}"><strong>{{ record.member.full_name }}</strong></a><br><span class="muted small">{{ record.collection_date|date:"M j, Y" }}</span></td><td>{{ record.crop.display_name }}</td><td>{{ record.quantity }} {{ record.quantity_unit }}</td><td><strong>{{ record.total_value|money:active_organisation.currency }}</strong></td></tr>{% empty %}<tr><td colspan="4"><div class="empty"><strong>No collections yet</strong><br>Produce collections will appear here.</div></td></tr>{% endfor %}</tbody></table></div></section>
-  <section class="panel"><div class="panel-head"><h2>Recent payments to members</h2><a href="{% url 'finance_list' %}?type=member_payment">View all →</a></div><div class="panel-body">{% for record in recent_payments %}<div class="list-row"><div class="list-row-main"><strong>{{ record.member|default:"No member" }}</strong><small>{{ record.get_record_type_display }} · {{ record.payment_date|date:"M j, Y" }}</small></div><div class="list-row-value"><strong>{{ record.paid_amount|money:active_organisation.currency }} paid of {{ record.amount|money:active_organisation.currency }}</strong><small><span class="status status-{{ record.status }}">{{ record.get_status_display }}</span></small></div></div>{% empty %}<div class="empty"><strong>No payments to members yet</strong><br>Payments to members will appear here.</div>{% endfor %}</div></section>
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Recent produce collections</h2><a href="{% url 'collection_list' %}">View all →</a>
+    </div>
+    <div class="table-wrap" style="border:0;border-radius:0;margin:0">
+      <table class="compact-table">
+        <thead>
+          <tr>
+            <th>Member</th>
+            <th>Crop</th>
+            <th>Quantity</th>
+            <th>Value</th>
+          </tr>
+        </thead>
+        <tbody>{% for record in recent_collections %}<tr>
+            <td><a href="{% url 'collection_detail' record.id %}"><strong>{{ record.member.full_name }}</strong></a><br><span class="muted small">{{ record.collection_date|date:"M j, Y" }}</span></td>
+            <td>{{ record.crop.display_name }}</td>
+            <td>{{ record.quantity }} {{ record.quantity_unit }}</td>
+            <td><strong>{{ record.total_value|money:active_organisation.currency }}</strong></td>
+          </tr>{% empty %}<tr>
+            <td colspan="4">
+              <div class="empty"><strong>No collections yet</strong><br>Produce collections will appear here.</div>
+            </td>
+          </tr>{% endfor %}</tbody>
+      </table>
+    </div>
+  </section>
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Recent payments to members</h2><a href="{% url 'finance_list' %}?type=member_payment">View all →</a>
+    </div>
+    <div class="panel-body">{% for record in recent_payments %}<div class="list-row">
+        <div class="list-row-main"><strong>{{ record.member|default:"No member" }}</strong><small>{{ record.get_record_type_display }} · {{ record.payment_date|date:"M j, Y" }}</small></div>
+        <div class="list-row-value"><strong>{{ record.paid_amount|money:active_organisation.currency }} paid of {{ record.amount|money:active_organisation.currency }}</strong><small><span
+              class="status status-{{ record.status }}">{{ record.get_status_display }}</span></small></div>
+      </div>{% empty %}<div class="empty"><strong>No payments to members yet</strong><br>Payments to members will appear
+        here.</div>{% endfor %}</div>
+  </section>
 </div>
 <div class="dashboard-grid">
-  <section class="panel"><div class="panel-head"><h2>Members by group</h2><a href="{% url 'structure_list' %}">Manage groups →</a></div><div class="panel-body">{% for group in group_summary %}<div class="progress-row"><a href="{% url 'structure_detail' group.id %}"><strong>{{ group.name }}</strong></a><div class="progress-track"><div class="progress-fill" style="width:{% widthratio group.total_members metrics.members 100 %}%"></div></div><strong>{{ group.total_members }}</strong></div>{% empty %}<div class="empty"><strong>No groups yet</strong><br>Create groups to organise your membership.</div>{% endfor %}</div></section>
-  <section class="panel"><div class="panel-head"><h2>Collection totals by crop</h2><a href="{% url 'reports_home' %}">Open reports →</a></div><div class="panel-body">{% for row in crop_totals %}<div class="list-row"><div class="list-row-main"><strong>{{ row.crop__name }}{% if row.crop__variety %} · {{ row.crop__variety }}{% endif %}</strong><small>Produce collected</small></div><div class="list-row-value"><strong>{{ row.total }} {{ row.quantity_unit }}</strong></div></div>{% empty %}<div class="empty"><strong>No crop totals yet</strong><br>Totals are calculated from collections.</div>{% endfor %}</div></section>
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Members by group</h2><a href="{% url 'structure_list' %}">Manage groups →</a>
+    </div>
+    <div class="panel-body">{% for group in group_summary %}<div class="progress-row"><a
+          href="{% url 'structure_detail' group.id %}"><strong>{{ group.name }}</strong></a>
+        <div class="progress-track">
+          <div class="progress-fill" style="width:{% widthratio group.total_members metrics.members 100 %}%"></div>
+        </div><strong>{{ group.total_members }}</strong>
+      </div>{% empty %}<div class="empty"><strong>No groups yet</strong><br>Create groups to organise your membership.
+      </div>{% endfor %}</div>
+  </section>
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Collection totals by crop</h2><a href="{% url 'reports_home' %}">Open reports →</a>
+    </div>
+    <div class="panel-body">{% for row in crop_totals %}<div class="list-row">
+        <div class="list-row-main"><strong>{{ row.crop__name }}{% if row.crop__variety %} · {{ row.crop__variety }}{% endif %}</strong><small>Produce collected</small></div>
+        <div class="list-row-value"><strong>{{ row.total }} {{ row.quantity_unit }}</strong></div>
+      </div>{% empty %}<div class="empty"><strong>No crop totals yet</strong><br>Totals are calculated from collections.
+      </div>{% endfor %}</div>
+  </section>
 </div>
-<section class="panel"><div class="panel-head"><h2>Recent field visits</h2></div><div class="panel-body">{% for visit in recent_field_visits %}<div class="list-row"><div class="list-row-main"><strong><a href="{% url 'member_detail' visit.member.id %}">{{ visit.member.full_name }}</a> - {{ visit.visit_date|date:"Y-m-d" }}</strong><small>{{ visit.notes|truncatechars:120 }} - recorded by {{ visit.recorded_by.get_full_name|default:visit.recorded_by.email }}</small></div></div>{% empty %}<div class="empty"><strong>No field visits yet</strong><br>Visits recorded by field officers will appear here.</div>{% endfor %}</div></section><section class="panel"><div class="panel-head"><h2>Members awaiting assignment</h2><span class="muted small">{{ awaiting_assignment_count }} total</span></div><div class="panel-body">{% for m in awaiting_assignment %}<div class="list-row"><div class="list-row-main"><strong><a href="{% url 'member_detail' m.id %}">{{ m.full_name }} ({{ m.membership_number }})</a></strong><small>Not in any active group, so no field officer can see this member. Add them to a group.</small></div></div>{% empty %}<div class="empty"><strong>All members are assigned</strong><br>Every member belongs to an active group.</div>{% endfor %}</div></section><section class="panel"><div class="panel-head"><h2>Recent activity</h2><a href="{% url 'member_list' %}">View members →</a></div><div class="panel-body">{% for event in recent_activity %}<div class="list-row"><div class="list-row-main"><strong><span class="activity-dot"></span>{{ event.get_action_display }} · {{ event.member.full_name }}</strong><small>{{ event.actor }} · {{ event.created_at|date:"M j, Y, H:i" }}</small></div></div>{% empty %}<div class="empty"><strong>No recent activity</strong><br>Member changes will appear here.</div>{% endfor %}</div></section>
+<section class="panel">
+  <div class="panel-head">
+    <h2>Recent field visits</h2>
+  </div>
+  <div class="panel-body">{% for visit in recent_field_visits %}<div class="list-row">
+      <div class="list-row-main"><strong><a href="{% url 'member_detail' visit.member.id %}">{{ visit.member.full_name }}</a> - {{ visit.visit_date|date:"Y-m-d" }}</strong><small>{{ visit.notes|truncatechars:120 }} - recorded
+          by {{ visit.recorded_by.get_full_name|default:visit.recorded_by.email }}</small></div>
+    </div>{% empty %}<div class="empty"><strong>No field visits yet</strong><br>Visits recorded by field officers will
+      appear here.</div>{% endfor %}</div>
+</section>
+<section class="panel">
+  <div class="panel-head">
+    <h2>Members awaiting assignment</h2><span class="muted small">{{ awaiting_assignment_count }} total</span>
+  </div>
+  <div class="panel-body">{% for m in awaiting_assignment %}<div class="list-row">
+      <div class="list-row-main"><strong><a href="{% url 'member_detail' m.id %}">{{ m.full_name }} ({{ m.membership_number }})</a></strong><small>Not in any active group, so no field officer can see this member.
+          Add them to a group.</small></div>
+    </div>{% empty %}<div class="empty"><strong>All members are assigned</strong><br>Every member belongs to an active
+      group.</div>{% endfor %}</div>
+</section>
+<section class="panel">
+  <div class="panel-head">
+    <h2>Recent activity</h2><a href="{% url 'member_list' %}">View members →</a>
+  </div>
+  <div class="panel-body">{% for event in recent_activity %}<div class="list-row">
+      <div class="list-row-main"><strong><span class="activity-dot"></span>{{ event.get_action_display }} · {{ event.member.full_name }}</strong><small>{{ event.actor }} · {{ event.created_at|date:"M j, Y, H:i" }}</small>
+      </div>
+    </div>{% empty %}<div class="empty"><strong>No recent activity</strong><br>Member changes will appear here.</div>{% endfor %}</div>
+</section>
 {% endblock %}

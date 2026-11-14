@@ -46,6 +46,8 @@
         {% if active_membership.role == 'field_officer' %}
         <a class="nav-item active" href="{% url 'field_home' %}"><span class="nav-icon">{% include "includes/icon.html" with name="field" %}</span>Field Workspace</a>
         <a class="nav-item {% if request.resolver_match.url_name == 'field_activity' %}active{% endif %}" href="{% url 'field_activity' %}"><span class="nav-icon">{% include "includes/icon.html" with name="field" %}</span>Field Activity</a>
+        <a class="nav-item {% if 'input' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'input_allocation_list' %}"><span class="nav-icon">{% include "includes/icon.html" with name="collections" %}</span>Fertilizer Distribution</a>
+        <a class="nav-item {% if request.resolver_match.url_name == 'harvest_coordination' %}active{% endif %}" href="{% url 'harvest_coordination' %}"><span class="nav-icon">{% include "includes/icon.html" with name="farms" %}</span>Harvest Coordination</a>
         {% else %}
         <a class="nav-item {% if request.resolver_match.url_name == 'dashboard' or request.resolver_match.url_name == 'workspace' %}active{% endif %}" href="{% url 'dashboard' %}"><span class="nav-icon">{% include "includes/icon.html" with name="dashboard" %}</span>Dashboard</a>
         <a class="nav-item {% if 'member' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'member_list' %}"><span class="nav-icon">{% include "includes/icon.html" with name="members" %}</span>Members</a>
@@ -53,6 +55,7 @@
         <a class="nav-item {% if 'input' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'input_allocation_list' %}"><span class="nav-icon">{% include "includes/icon.html" with name="collections" %}</span>Fertilizer Distribution</a>
         <a class="nav-item {% if 'finance' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'finance_list' %}"><span class="nav-icon">{% include "includes/icon.html" with name="payments" %}</span>Payments &amp; Dues</a>
         <a class="nav-item {% if 'farm' in request.resolver_match.url_name or 'crop' in request.resolver_match.url_name or 'season' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'farm_list' %}"><span class="nav-icon">{% include "includes/icon.html" with name="farms" %}</span>Farms &amp; Crops</a>
+        <a class="nav-item {% if request.resolver_match.url_name == 'harvest_coordination' %}active{% endif %}" href="{% url 'harvest_coordination' %}"><span class="nav-icon">{% include "includes/icon.html" with name="farms" %}</span>Harvest Coordination</a>
         <a class="nav-item {% if 'structure' in request.resolver_match.url_name or 'assignment' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'structure_list' %}"><span class="nav-icon">{% include "includes/icon.html" with name="groups" %}</span>Groups</a>
         <a class="nav-item {% if 'field_' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'field_home' %}"><span class="nav-icon">{% include "includes/icon.html" with name="field" %}</span>Field Workspace</a>
         <a class="nav-item {% if 'field_advisory_review' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'field_advisory_review_list' %}"><span class="nav-icon">{% include "includes/icon.html" with name="field" %}</span>Advisory Review</a>

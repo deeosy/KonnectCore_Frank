@@ -1,9 +1,11 @@
 import uuid
+from datetime import timedelta
 from decimal import Decimal
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils import timezone
 
 from apps.members.models import Member
 from apps.organisations.models import OrganisationOwnedModel
@@ -156,8 +158,8 @@ class FarmOwnershipTransfer(OrganisationOwnedModel):
     transferred_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ["-transferred_at", "-pk"]
-        indexes = [models.Index(fields=["organisation", "farm", "transferred_at"])]
+        ordering = ["-transferred_at", "-pk"]  # noqa: RUF012
+        indexes = [models.Index(fields=["organisation", "farm", "transferred_at"])]  # noqa: RUF012
 
     def clean(self):
         errors = {}
@@ -218,6 +220,10 @@ class FarmCropSeason(OrganisationOwnedModel):
     planting_start = models.DateField(null=True, blank=True)
     planting_end = models.DateField(null=True, blank=True)
 
+    # When the farmer expects to harvest. Used to group nearby farmers for
+    # shared machinery coordination (Phase 3).
+    expected_harvest_date = models.DateField(null=True, blank=True)
+
     # What the farmer expects to harvest.
     estimated_yield = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
 
@@ -230,17 +236,18 @@ class FarmCropSeason(OrganisationOwnedModel):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ["-planting_start", "season", "crop__name"]
-        constraints = [
+        ordering = ["-planting_start", "season", "crop__name"]  # noqa: RUF012
+        constraints = [  # noqa: RUF012
             # Each farm/crop combo can only appear once in a given season.
             models.UniqueConstraint(fields=["farm", "crop", "season"], name="unique_farm_crop_season"),
             models.CheckConstraint(condition=models.Q(estimated_yield__isnull=True) | models.Q(estimated_yield__gte=0), name="estimated_yield_nonnegative"),
             models.CheckConstraint(condition=models.Q(actual_yield__isnull=True) | models.Q(actual_yield__gte=0), name="actual_yield_nonnegative"),
         ]
-        indexes = [
+        indexes = [  # noqa: RUF012
             models.Index(fields=["organisation", "farm"]),
             models.Index(fields=["organisation", "crop"]),
-            models.Index(fields=["organisation", "season"])
+            models.Index(fields=["organisation", "season"]),
+            models.Index(fields=["organisation", "expected_harvest_date"], name="farms_season_harvest_idx"),
         ]
 
     def clean(self):
@@ -267,6 +274,78 @@ class FarmCropSeason(OrganisationOwnedModel):
 
         if errors:
             raise ValidationError(errors)
+
+    @classmethod
+    def harvest_window(cls, organisation, *, crop=None, reference_date=None, window_days=7, member_ids=None):
+        """Seasons expected to be harvested within ±``window_days`` of a reference date.
+
+        ``member_ids`` optionally limits the result to a queryset/subquery of
+        members, which lets the Field Workspace show only assigned farmers.
+        """
+        reference_date = reference_date or timezone.localdate()
+        start = reference_date - timedelta(days=window_days)
+        end = reference_date + timedelta(days=window_days)
+        queryset = (
+            cls.objects.for_organisation(organisation)
+            .filter(expected_harvest_date__range=(start, end))
+            .select_related("farm__member", "crop")
+        )
+        if crop is not None:
+            queryset = queryset.filter(crop=crop)
+        if member_ids is not None:
+            queryset = queryset.filter(farm__member_id__in=member_ids)
+        return queryset.order_by(
+            "crop__name",
+            "farm__location",
+            "expected_harvest_date",
+            "farm__member__first_name",
+            "farm__member__last_name",
+        )
+
+    @classmethod
+    def harvest_groups(cls, organisation, *, crop=None, reference_date=None, window_days=7, member_ids=None):
+        """Cluster nearby farmers with the same crop and overlapping harvest dates.
+
+        Farmers are grouped only when they grow the same crop, their farms share
+        the same recorded location, and consecutive expected harvest dates are no
+        more than ``window_days`` apart. Each returned dictionary contains the
+        ``crop``, ``location``, ``date_start``, ``date_end``, member count and
+        the matching ``seasons``, ready for the machinery coordination dashboard.
+        """
+        groups = []
+        for season in cls.harvest_window(
+            organisation,
+            crop=crop,
+            reference_date=reference_date,
+            window_days=window_days,
+            member_ids=member_ids,
+        ):
+            location = (season.farm.location or "").strip()
+            location_key = location.casefold()
+            target = None
+            for group in groups:
+                if group["crop_id"] != season.crop_id or group["location_key"] != location_key:
+                    continue
+                if season.expected_harvest_date - group["date_end"] <= timedelta(days=window_days):
+                    target = group
+                    break
+            if target is None:
+                target = {
+                    "crop": season.crop,
+                    "crop_id": season.crop_id,
+                    "location": location or "Location not recorded",
+                    "location_key": location_key,
+                    "date_start": season.expected_harvest_date,
+                    "date_end": season.expected_harvest_date,
+                    "seasons": [],
+                }
+                groups.append(target)
+            target["seasons"].append(season)
+            target["date_start"] = min(target["date_start"], season.expected_harvest_date)
+            target["date_end"] = max(target["date_end"], season.expected_harvest_date)
+        for group in groups:
+            group["member_count"] = len({season.farm.member_id for season in group["seasons"]})
+        return groups
 
     def __str__(self):
         return f"{self.crop.display_name} — {self.season}"
