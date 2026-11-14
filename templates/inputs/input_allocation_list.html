@@ -5,6 +5,9 @@
 <section class="page-head">
     <h1>Input Allocations</h1>
     <div class="actions">
+        {% if active_membership.role == "admin" or active_membership.role == "manager" %}
+        <a class="button secondary" href="{% url 'input_distribution_audit' %}">Distribution audit</a>
+        {% endif %}
         <a class="button" href="{% url 'input_allocation_create' %}">Request Input</a>
     </div>
 </section>

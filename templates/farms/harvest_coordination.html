@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Harvest coordination · KonnectCore{% endblock %}
+{% block header_title %}Farms &amp; Crops{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Field logistics</p>
+    <h1>Shared machinery coordination</h1>
+    <p class="muted">Farmers with the same crop, the same vicinity and harvest dates within {{ window_days }} days of each other.</p>
+  </div>
+  <div class="actions"><a class="button secondary" href="{% url 'farm_list' %}">Farms &amp; crops</a></div>
+</div>
+
+<form class="filter-bar" method="get">
+  <label><span>Crop</span>
+    <select name="crop">
+      <option value="">All crops</option>
+      {% for crop in crops %}<option value="{{ crop.id }}"{% if selected_crop and selected_crop.id == crop.id %} selected{% endif %}>{{ crop.display_name }}</option>{% endfor %}
+    </select>
+  </label>
+  <label><span>Harvest window centre</span><input type="date" name="date" value="{{ reference_date|date:'Y-m-d' }}"></label>
+  <button class="button" type="submit">Find groups</button>
+  <a class="button secondary" href="{% url 'harvest_coordination' %}">Clear</a>
+</form>
+
+{% for group in groups %}
+<section class="card">
+  <div class="section-head">
+    <div>
+      <h2>{{ group.crop.display_name }} · {{ group.location }}</h2>
+      <p class="muted small">{{ group.date_start|date:"M j, Y" }}{% if group.date_start != group.date_end %} to {{ group.date_end|date:"M j, Y" }}{% endif %} · {{ group.member_count }} farmer{{ group.member_count|pluralize }}</p>
+    </div>
+    <span class="tag">{{ group.seasons|length }} season{{ group.seasons|length|pluralize }}</span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Farmer</th><th>Farm</th><th>Size</th><th>Expected harvest</th><th>Season</th></tr></thead>
+      <tbody>
+        {% for season in group.seasons %}
+        <tr>
+          <td>
+            {% if active_membership.role == "field_officer" %}
+            <a href="{% url 'field_member_detail' season.farm.member.id %}"><strong>{{ season.farm.member.full_name }}</strong></a>
+            {% else %}
+            <a href="{% url 'member_detail' season.farm.member.id %}"><strong>{{ season.farm.member.full_name }}</strong></a>
+            {% endif %}
+            <br><span class="muted small">{{ season.farm.member.membership_number }}{% if season.farm.member.phone %} · {{ season.farm.member.phone }}{% endif %}</span>
+          </td>
+          <td>{{ season.farm.name }}</td>
+          <td>{% if season.farm.size != None %}{{ season.farm.size }} {{ season.farm.get_size_unit_display }}{% else %}—{% endif %}</td>
+          <td>{{ season.expected_harvest_date|date:"M j, Y" }}</td>
+          <td>{{ season.season }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% empty %}
+<div class="empty">
+  <h2>No harvest groups in this window</h2>
+  <p>Record an expected harvest date on a crop season, or widen the date filter. Groups appear when farmers share a crop and farm location.</p>
+</div>
+{% endfor %}
+{% endblock %}

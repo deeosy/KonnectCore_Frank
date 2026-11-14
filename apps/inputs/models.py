@@ -1,5 +1,6 @@
 import uuid
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 from apps.members.models import Member
 from apps.organisations.models import OrganisationOwnedModel
@@ -40,6 +41,16 @@ class InputAllocation(OrganisationOwnedModel):
         indexes = [
             models.Index(fields=["organisation", "member", "status"]),
         ]
+
+    def clean(self):
+        """Keep allocations inside one tenant and reject meaningless quantities."""
+        errors = {}
+        if self.member_id and self.organisation_id and self.member.organisation_id != self.organisation_id:
+            errors["member"] = "Member must belong to the same organisation."
+        if self.quantity is not None and self.quantity <= 0:
+            errors["quantity"] = "Quantity must be greater than zero."
+        if errors:
+            raise ValidationError(errors)
 
     def __str__(self):
         return f"{self.member} - {self.input_type} ({self.quantity})"

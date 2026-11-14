@@ -62,8 +62,13 @@ class FarmOwnershipTransferForm(forms.Form):
 class FarmCropSeasonForm(TenantModelForm):
     class Meta:
         model = FarmCropSeason
-        fields = ["crop", "season", "planting_start", "planting_end", "estimated_yield", "actual_yield", "yield_unit", "notes"]
-        widgets = {"planting_start": forms.DateInput(attrs={"type": "date"}), "planting_end": forms.DateInput(attrs={"type": "date"}), "notes": forms.Textarea(attrs={"rows": 3})}
+        fields = ["crop", "season", "planting_start", "planting_end", "expected_harvest_date", "estimated_yield", "actual_yield", "yield_unit", "notes"]
+        widgets = {
+            "planting_start": forms.DateInput(attrs={"type": "date"}),
+            "planting_end": forms.DateInput(attrs={"type": "date"}),
+            "expected_harvest_date": forms.DateInput(attrs={"type": "date"}),
+            "notes": forms.Textarea(attrs={"rows": 3}),
+        }
 
     def __init__(self, *args, farm, **kwargs):
         self.farm = farm

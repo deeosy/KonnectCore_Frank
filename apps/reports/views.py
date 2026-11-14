@@ -11,6 +11,7 @@ from openpyxl import Workbook
 from apps.collections.models import CollectionRecord
 from apps.finance.models import FinancialRecord
 from apps.inputs.models import InputAllocation
+from apps.inputs.services import build_distribution_audit
 from apps.farms.models import Crop, Farm
 from apps.groups.models import GroupMemberAssignment,StructureUnit
 from apps.members.models import Member, MemberHistory
@@ -137,11 +138,14 @@ def _rows(request,report):
     if report=="input_allocations":
         qs=InputAllocation.objects.for_organisation(org).select_related("member","verified_by")
         return ["Date","Member","Membership number","Input Type","Quantity","Status","Verified By"],([make_naive(x.created_at),x.member.full_name,x.member.membership_number,x.get_input_type_display(),x.quantity,x.get_status_display(),x.verified_by.get_full_name() if x.verified_by else ""] for x in qs)
+    if report=="distribution_audit":
+        rows=build_distribution_audit(org)["rows"]
+        return ["Region","Group","Total allocations","Requested","Verified","Partially delivered","Delivered","Rejected","Quantity allocated","Quantity delivered"],([x["region"],x["group"],x["total"],x["requested"],x["verified"],x["partially_delivered"],x["delivered"],x["rejected"],x["quantity"],x["delivered_quantity"]] for x in rows)
     raise ValueError("Unknown report")
 
 @manager_or_admin_required
 def export_report(request,report,format):
-    if report not in {"members","collections","finance","groups","input_allocations"} or format not in {"csv","xlsx"}: return HttpResponse(status=404)
+    if report not in {"members","collections","finance","groups","input_allocations","distribution_audit"} or format not in {"csv","xlsx"}: return HttpResponse(status=404)
     headers,rows=_rows(request,report);filename=f"{report}-report.{format}"
     if format=="csv":
         response=HttpResponse(content_type="text/csv");response["Content-Disposition"]=f'attachment; filename="{filename}"';writer=csv.writer(response);writer.writerow(headers);writer.writerows(rows);return response

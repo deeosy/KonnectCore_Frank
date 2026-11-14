@@ -15,6 +15,7 @@
   <div class="field-actions">
     <a class="button secondary" href="{% url 'field_visit_add' member.id %}">Record visit</a>
     <a class="button secondary" href="{% url 'field_farm_update' member.id %}">Update farm</a>
+    <a class="button secondary" href="{% url 'input_allocation_create' %}?member={{ member.id }}">Request input</a>
     <a class="button" href="{% url 'field_collection_add' member.id %}">Add collection</a>
   </div>
 
