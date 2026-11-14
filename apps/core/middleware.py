@@ -23,9 +23,9 @@ class NoStoreForAuthenticatedMiddleware:
 
 CSP_TEMPLATE = (
     "default-src 'self'; "
-    "script-src 'self' 'nonce-{nonce}'; "
-    "style-src 'self' 'unsafe-inline'; "
-    "img-src 'self' data:; "
+    "script-src 'self' 'nonce-{nonce}' https://unpkg.com; "
+    "style-src 'self' 'unsafe-inline' https://unpkg.com; "
+    "img-src 'self' data: https://unpkg.com https://tile.openstreetmap.org; "
     "font-src 'self'; "
     "connect-src 'self'; "
     "object-src 'none'; "

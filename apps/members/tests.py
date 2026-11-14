@@ -1,3 +1,4 @@
+import base64
 import csv
 import io
 import shutil
@@ -19,6 +20,7 @@ from .models import Member, MemberDocument, MemberHistory
 
 User = get_user_model()
 TEST_MEDIA_ROOT = tempfile.mkdtemp(prefix="konnectcore-test-media-")
+TINY_GIF = base64.b64decode("R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=")
 
 
 @override_settings(MEDIA_ROOT=TEST_MEDIA_ROOT)
@@ -66,7 +68,8 @@ class MemberFixture(TestCase):
     def member_payload(self, number="A-002", **overrides):
         data = {
             "first_name": "Abena", "last_name": "Owusu", "phone": "+233200000001",
-            "membership_number": number, "id_reference": "ID-88", "location": "Kumasi",
+            "membership_number": number, "id_type": Member.IDType.OTHER,
+            "id_number": "ID-88", "location": "Kumasi",
             "status": Member.Status.ACTIVE,
         }
         data.update(overrides)
@@ -136,11 +139,43 @@ class MemberRoleTests(MemberFixture):
         event = member.history.get(action=MemberHistory.Action.UPDATED)
         self.assertEqual(event.changes["location"], {"from": "Kumasi", "to": "Accra"})
 
+    def test_member_id_uploads_create_private_id_verification_audit_event(self):
+        self.login_as(self.alpha_manager, self.alpha)
+        response = self.client.post(
+            reverse("member_create"),
+            self.member_payload(
+                number="A-ID-1",
+                id_type=Member.IDType.GHANA_CARD,
+                id_number="SECRET-ID-123",
+                id_front=SimpleUploadedFile("front.gif", TINY_GIF, content_type="image/gif"),
+                id_back=SimpleUploadedFile("back.gif", TINY_GIF, content_type="image/gif"),
+            ),
+        )
+        member = Member.objects.get(organisation=self.alpha, membership_number="A-ID-1")
+        event = member.history.get(action=MemberHistory.Action.ID_VERIFICATION)
+        self.assertEqual(event.changes["tag"], "ID Verification")
+        self.assertEqual(event.changes["document_type"], "Ghana Card")
+        self.assertTrue(event.changes["front_image_uploaded"])
+        self.assertTrue(event.changes["back_image_uploaded"])
+        self.assertNotIn("SECRET-ID-123", str(event.changes))
+        self.assertNotEqual(member.id_front.name, member.id_back.name)
+        self.assertRedirects(response, reverse("member_detail", args=[member.pk]))
+
+    def test_id_number_requires_document_type(self):
+        self.login_as(self.alpha_manager, self.alpha)
+        response = self.client.post(
+            reverse("member_create"),
+            self.member_payload(number="A-ID-2", id_type="", id_front="", id_back=""),
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Choose the type of identification being verified.")
+        self.assertFalse(Member.objects.filter(organisation=self.alpha, membership_number="A-ID-2").exists())
+
 
 class MemberSearchTests(MemberFixture):
     def test_searches_phone_membership_id_location_and_name(self):
         self.alpha_member.phone = "+233555123"
-        self.alpha_member.id_reference = "NAT-443"
+        self.alpha_member.id_number = "NAT-443"
         self.alpha_member.location = "Tamale North"
         self.alpha_member.save()
         self.login_as(self.alpha_admin, self.alpha)
@@ -187,6 +222,34 @@ class MemberFileTests(MemberFixture):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Upload a PDF or image file")
         self.assertFalse(MemberDocument.objects.filter(member=self.alpha_member).exists())
+
+    def test_identity_document_types_are_saved_and_audited_as_id_verification(self):
+        self.login_as(self.alpha_admin, self.alpha)
+        response = self.client.post(
+            reverse("member_document_add", args=[self.alpha_member.pk]),
+            {
+                "title": "Ghana Card copy",
+                "document_type": MemberDocument.DocumentType.GHANA_CARD,
+                "file": SimpleUploadedFile("ghana-card.pdf", b"private-id-document", content_type="application/pdf"),
+            },
+        )
+        self.assertRedirects(response, reverse("member_detail", args=[self.alpha_member.pk]))
+        document = MemberDocument.objects.get(member=self.alpha_member)
+        self.assertEqual(document.document_type, MemberDocument.DocumentType.GHANA_CARD)
+        event = self.alpha_member.history.get(action=MemberHistory.Action.ID_VERIFICATION)
+        self.assertEqual(event.changes["tag"], "ID Verification")
+        self.assertEqual(event.changes["document_type"], "Ghana Card")
+
+    def test_id_photo_download_is_scoped_to_visible_member(self):
+        self.alpha_member.id_front = SimpleUploadedFile("front.gif", b"private-front-image", content_type="image/gif")
+        self.alpha_member.save(update_fields=["id_front"])
+        self.login_as(self.alpha_admin, self.alpha)
+        response = self.client.get(reverse("member_id_photo", args=[self.alpha_member.pk, "front"]))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(b"".join(response.streaming_content), b"private-front-image")
+
+        self.login_as(self.beta_admin, self.beta)
+        self.assertEqual(self.client.get(reverse("member_id_photo", args=[self.alpha_member.pk, "front"])).status_code, 404)
 
 
 class MemberImportTests(MemberFixture):

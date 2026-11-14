@@ -31,11 +31,32 @@ class FarmForm(TenantModelForm):
     class Meta:
         model = Farm
         fields = ["member", "name", "size", "size_unit", "location", "latitude", "longitude", "notes"]
-        widgets = {"notes": forms.Textarea(attrs={"rows": 3}), "latitude": forms.NumberInput(attrs={"step": "0.000001"}), "longitude": forms.NumberInput(attrs={"step": "0.000001"})}
+        widgets = {
+            "notes": forms.Textarea(attrs={"rows": 3}),
+            "latitude": forms.HiddenInput,
+            "longitude": forms.HiddenInput,
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["member"].queryset = Member.objects.for_organisation(self.organisation)
+
+class FarmOwnershipTransferForm(forms.Form):
+    successor_member = forms.ModelChoiceField(
+        queryset=Member.objects.none(),
+        label="Successor member",
+        help_text="Choose the member who will become the recorded owner of this farm.",
+    )
+    reason = forms.CharField(
+        widget=forms.Textarea(attrs={"rows": 4}),
+        help_text="Record why ownership is being transferred.",
+    )
+
+    def __init__(self, *args, organisation, current_member, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["successor_member"].queryset = Member.objects.for_organisation(
+            organisation
+        ).filter(status=Member.Status.ACTIVE).exclude(pk=current_member.pk)
 
 
 class FarmCropSeasonForm(TenantModelForm):

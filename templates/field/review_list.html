@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Advisory Review{% endblock %}
+{% block header_title %}Advisory Review{% endblock %}
+{% block content %}
+<div class="content-card">
+    <h1>Advisory Records for Review</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Member</th>
+                <th>Observation</th>
+                <th>Status</th>
+                <th>Supervisor comment</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for advisory in advisories %}
+            <tr>
+                <td>{{ advisory.visit.member.full_name }}</td>
+                <td>{{ advisory.observation|truncatechars:50 }}</td>
+                <td>{{ advisory.status }}</td>
+                <td>{{ advisory.review_comment|truncatechars:60|default:"—" }}</td>
+                <td><a href="{% url 'field_advisory_review_detail' advisory.pk %}">Review</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

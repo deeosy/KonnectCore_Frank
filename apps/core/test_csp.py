@@ -24,6 +24,17 @@ class ContentSecurityPolicyTests(TestCase):
         self.assertIn("base-uri 'self'", policy)
         self.assertIn("form-action 'self'", policy)
 
+    def test_policy_allows_leaflet_assets_and_openstreetmap_tiles(self):
+        policy = self.policy(self.client.get("/login/"))
+        self.assertIn("https://unpkg.com", policy.split("script-src", 1)[1].split(";", 1)[0])
+        self.assertIn("https://unpkg.com", policy.split("style-src", 1)[1].split(";", 1)[0])
+        self.assertIn("https://unpkg.com", policy.split("img-src", 1)[1].split(";", 1)[0])
+        self.assertIn("https://tile.openstreetmap.org", policy.split("img-src", 1)[1].split(";", 1)[0])
+
+    def test_referrer_policy_sends_origin_to_external_map_tile_server(self):
+        response = self.client.get("/login/")
+        self.assertEqual(response.headers["Referrer-Policy"], "strict-origin-when-cross-origin")
+
     def test_every_script_tag_carries_the_page_nonce(self):
         response = self.client.get("/login/")
         nonce = NONCE_RE.search(self.policy(response)).group(1)

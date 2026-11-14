@@ -9,7 +9,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from apps.groups.models import GroupMemberAssignment, StructureUnit
-from apps.members.models import Member
+from apps.members.models import Member, MemberHistory
 from apps.organisations.middleware import ActiveOrganisationMiddleware
 from apps.organisations.models import Organisation, OrganisationMembership
 
@@ -134,3 +134,20 @@ class FieldVisitVisibilityTests(TestCase):
         }, follow=True)
         self.assertContains(response, "awaiting assignment")
         self.assertTrue(Member.objects.filter(organisation=self.org, membership_number="QA_NEW1").exists())
+
+    def test_field_registration_accepts_id_images_and_records_private_verification_audit(self):
+        self.login(self.north)
+        response = self.client.post(reverse("field_member_create"), {
+            "first_name": "QA_TEST_ID", "last_name": "Officer", "membership_number": "QA_ID1",
+            "id_type": Member.IDType.GHANA_CARD, "id_number": "PRIVATE-ID-456", "status": "active",
+            "id_front": SimpleUploadedFile("front.gif", TINY_GIF, content_type="image/gif"),
+            "id_back": SimpleUploadedFile("back.gif", TINY_GIF, content_type="image/gif"),
+        })
+        self.assertRedirects(response, reverse("field_home"))
+        member = Member.objects.get(organisation=self.org, membership_number="QA_ID1")
+        event = member.history.get(action=MemberHistory.Action.ID_VERIFICATION)
+        self.assertTrue(member.id_front)
+        self.assertTrue(member.id_back)
+        self.assertNotEqual(member.id_front.name, member.id_back.name)
+        self.assertEqual(event.changes["tag"], "ID Verification")
+        self.assertNotIn("PRIVATE-ID-456", str(event.changes))

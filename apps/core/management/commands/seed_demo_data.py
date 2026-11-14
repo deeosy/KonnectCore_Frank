@@ -77,7 +77,8 @@ class Command(BaseCommand):
                 membership_number=number,
                 defaults={
                     "first_name": first, "last_name": last, "phone": phone,
-                    "id_reference": f"GHA-{820000000 + i}", "location": location,
+                    "id_type": Member.IDType.GHANA_CARD,
+                    "id_number": f"GHA-{820000000 + i}", "location": location,
                     "status": status, "created_by": admin, "updated_by": admin,
                 },
             )

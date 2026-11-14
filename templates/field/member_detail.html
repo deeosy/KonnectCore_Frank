@@ -18,6 +18,16 @@
     <a class="button" href="{% url 'field_collection_add' member.id %}">Add collection</a>
   </div>
 
+  {% if member.id_type or member.id_number or member.id_front or member.id_back %}
+  <section class="card">
+    <h2>ID verification</h2>
+    {% if member.id_type %}<p><strong>Document type:</strong> {{ member.get_id_type_display }}</p>{% endif %}
+    {% if member.id_number %}<p><strong>ID number:</strong> {{ member.id_number }}</p>{% endif %}
+    {% if member.id_front %}<p><a href="{% url 'member_id_photo' member.id 'front' %}">View ID front image</a></p>{% endif %}
+    {% if member.id_back %}<p><a href="{% url 'member_id_photo' member.id 'back' %}">View ID back image</a></p>{% endif %}
+  </section>
+  {% endif %}
+
   <section class="card">
     <h2>Farm</h2>
     {% for farm in member.farms.all %}

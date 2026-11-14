@@ -36,6 +36,9 @@ class SeedDemoDataCommandTests(TestCase):
         self.assertEqual(self._counts(self.organisation), first)
         self.assertEqual(first, (24, 4, 24, 34, 31, 12))
         self.assertEqual(self._counts(self.other), (0, 0, 0, 0, 0, 0))
+        demo_member = Member.objects.get(organisation=self.organisation, membership_number="KC-001")
+        self.assertEqual(demo_member.id_type, Member.IDType.GHANA_CARD)
+        self.assertEqual(demo_member.id_number, "GHA-820000000")
         self.assertEqual(
             OrganisationMembership.objects.filter(organisation=self.organisation).count(), 4
         )

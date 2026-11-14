@@ -11,5 +11,6 @@ urlpatterns = [
     path("<uuid:member_id>/archive/", views.member_archive, name="member_archive"),
     path("<uuid:member_id>/documents/add/", views.member_document_add, name="member_document_add"),
     path("<uuid:member_id>/photo/", views.member_photo, name="member_photo"),
+    path("<uuid:member_id>/id-photo/<str:side>/", views.member_id_photo, name="member_id_photo"),
     path("documents/<uuid:document_id>/download/", views.member_document_download, name="member_document_download"),
 ]

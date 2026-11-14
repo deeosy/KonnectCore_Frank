@@ -97,6 +97,43 @@ def save_member_form(form, *, organisation, actor, creating):
     return member
 
 
+def _id_verification_state(member):
+    return {
+        "id_type": member.id_type,
+        "id_number": member.id_number,
+        "id_front": member.id_front.name if member.id_front else "",
+        "id_back": member.id_back.name if member.id_back else "",
+    }
+
+
+def record_id_verification(member, actor, before=None):
+    """Audit ID verification activity without copying ID numbers or file paths into history."""
+    after = _id_verification_state(member)
+    if before is None:
+        changed = any(after.values())
+        previous = {}
+    else:
+        previous = before
+        changed = after != previous
+    if not changed:
+        return None
+
+    return record_history(
+        member,
+        MemberHistory.Action.ID_VERIFICATION,
+        actor,
+        {
+            "tag": "ID Verification",
+            "document_type": Member.IDType(after["id_type"]).label if after["id_type"] else "",
+            "id_number_updated": after["id_number"] != previous.get("id_number", ""),
+            "front_image_uploaded": bool(after["id_front"]),
+            "front_image_changed": after["id_front"] != previous.get("id_front", ""),
+            "back_image_uploaded": bool(after["id_back"]),
+            "back_image_changed": after["id_back"] != previous.get("id_back", ""),
+        },
+    )
+
+
 @operational_staff_required
 def member_list(request):
     members = Member.objects.for_organisation(request.organisation)
@@ -108,7 +145,7 @@ def member_list(request):
             | Q(last_name__icontains=query)
             | Q(phone__icontains=query)
             | Q(membership_number__icontains=query)
-            | Q(id_reference__icontains=query)
+            | Q(id_number__icontains=query)
             | Q(location__icontains=query)
         )
     if status in Member.Status.values:
@@ -157,6 +194,7 @@ def create_member_with_farm(form, farm_form, *, organisation, actor):
                     farm_form.add_error(field if field in farm_form.fields else None, error)
             return None
         record_history(member, MemberHistory.Action.CREATED, actor, {"member": member_snapshot(member)})
+        record_id_verification(member, actor)
     return member
 
 
@@ -179,6 +217,7 @@ def member_create(request):
 def member_edit(request, member_id):
     member = get_object_or_404(Member.objects.for_organisation(request.organisation), pk=member_id)
     before = member_snapshot(member)
+    before_id_verification = _id_verification_state(member)
     form = MemberForm(request.POST or None, request.FILES or None, instance=member, organisation=request.organisation)
     if request.method == "POST" and form.is_valid():
         saved = save_member_form(form, organisation=request.organisation, actor=request.user, creating=False)
@@ -186,6 +225,7 @@ def member_edit(request, member_id):
             changes = changed_fields(before, member_snapshot(saved))
             if changes:
                 record_history(saved, MemberHistory.Action.UPDATED, request.user, changes)
+            record_id_verification(saved, request.user, before_id_verification)
             messages.success(request, "Member updated.")
             return redirect("member_detail", member_id=saved.pk)
     return render(request, "members/member_form.html", {"form": form, "member": member, "title": "Edit member"})
@@ -246,13 +286,35 @@ def member_document_add(request, member_id):
     member = get_object_or_404(Member.objects.for_organisation(request.organisation), pk=member_id)
     form = MemberDocumentForm(request.POST or None, request.FILES or None)
     if request.method == "POST" and form.is_valid():
-        document = form.save(commit=False)
-        document.organisation = request.organisation
-        document.member = member
-        document.uploaded_by = request.user
-        document.full_clean()
-        document.save()
-        record_history(member, MemberHistory.Action.DOCUMENT_ADDED, request.user, {"title": document.title})
+        with transaction.atomic():
+            document = form.save(commit=False)
+            document.organisation = request.organisation
+            document.member = member
+            document.uploaded_by = request.user
+            document.full_clean()
+            document.save()
+            if document.document_type in {
+                MemberDocument.DocumentType.VOTER_ID,
+                MemberDocument.DocumentType.NHIS,
+                MemberDocument.DocumentType.GHANA_CARD,
+            }:
+                record_history(
+                    member,
+                    MemberHistory.Action.ID_VERIFICATION,
+                    request.user,
+                    {
+                        "tag": "ID Verification",
+                        "document_type": document.get_document_type_display(),
+                        "document_id": str(document.pk),
+                    },
+                )
+            else:
+                record_history(
+                    member,
+                    MemberHistory.Action.DOCUMENT_ADDED,
+                    request.user,
+                    {"title": document.title, "document_type": document.get_document_type_display()},
+                )
         messages.success(request, "Document attached.")
         return redirect("member_detail", member_id=member.pk)
     return render(request, "members/member_document_form.html", {"form": form, "member": member})
@@ -264,6 +326,16 @@ def member_photo(request, member_id):
     if not member.photo:
         raise Http404("Member has no photo.")
     return FileResponse(member.photo.open("rb"), content_type="image/*")
+
+@organisation_required
+def member_id_photo(request, member_id, side):
+    if side not in {"front", "back"}:
+        raise Http404("Unknown ID photo side.")
+    member = get_object_or_404(visible_members(request), pk=member_id)
+    photo = getattr(member, f"id_{side}")
+    if not photo:
+        raise Http404("Member has no ID photo for this side.")
+    return FileResponse(photo.open("rb"), content_type="image/*")
 
 
 @organisation_required

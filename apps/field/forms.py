@@ -1,9 +1,7 @@
 from django import forms
-from apps.members.forms import MemberForm
-from apps.farms.forms import FarmForm
-from apps.collections.forms import CollectionRecordForm
 from apps.core.submissions import add_submission_key
-from .models import FieldVisit
+from .models import FieldVisit, AdvisoryRecord
+
 class FieldVisitForm(forms.ModelForm):
  class Meta:
   model=FieldVisit;fields=["visit_date","notes","latitude","longitude","photo"]
@@ -15,3 +13,16 @@ class FieldVisitForm(forms.ModelForm):
   x=super().save(False);x.organisation=self.organisation;x.member=self.member;x.recorded_by=self.recorded_by;x.full_clean()
   if commit:x.save()
   return x
+
+class AdvisoryRecordForm(forms.ModelForm):
+    observation = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 4}))
+
+    class Meta:
+        model = AdvisoryRecord
+        fields = ["observation", "photo"]
+
+class AdvisoryReviewForm(forms.ModelForm):
+    class Meta:
+        model = AdvisoryRecord
+        fields = ["review_comment"]
+        widgets = {"review_comment": forms.Textarea(attrs={"rows": 4})}

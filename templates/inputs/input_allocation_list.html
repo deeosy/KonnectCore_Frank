@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Input Allocations{% endblock %}
+{% block header_title %}Fertilizer Distribution{% endblock %}
+{% block content %}
+<section class="page-head">
+    <h1>Input Allocations</h1>
+    <div class="actions">
+        <a class="button" href="{% url 'input_allocation_create' %}">Request Input</a>
+    </div>
+</section>
+<section class="panel">
+    <div class="panel-body">
+        {% if allocations %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Member</th>
+                    <th>Input Type</th>
+                    <th>Quantity</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for alloc in allocations %}
+                <tr>
+                    <td><a href="{% url 'input_allocation_detail' alloc.id %}">{{ alloc.member.full_name }}</a></td>
+                    <td>{{ alloc.get_input_type_display }}</td>
+                    <td>{{ alloc.quantity }}</td>
+                    <td><span class="status status-{{ alloc.status }}">{{ alloc.get_status_display }}</span></td>
+                    <td>{{ alloc.created_at|date:"M j, Y" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="mp-empty">No input allocations recorded.</p>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

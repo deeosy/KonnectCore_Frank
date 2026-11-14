@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Review Advisory{% endblock %}
+{% block header_title %}Review Advisory{% endblock %}
+{% block content %}
+<div class="content-card">
+    <h1>Review Advisory</h1>
+    <p><strong>Member:</strong> {{ advisory.visit.member.full_name }}</p>
+    <p><strong>Observation:</strong> {{ advisory.observation }}</p>
+    {% if advisory.photo %}
+    <p><strong>Photo:</strong></p>
+    <img src="{% url 'field_advisory_photo' advisory.pk %}" alt="Advisory Photo" style="max-width: 300px;">
+    {% endif %}
+
+    {% if advisory.reviewed_by %}
+    <p><strong>Last reviewed by:</strong> {{ advisory.reviewed_by.get_full_name|default:advisory.reviewed_by.email }}</p>
+    {% endif %}
+    {% if advisory.review_comment %}
+    <section class="card"><h2>Supervisor comment</h2><p>{{ advisory.review_comment|linebreaksbr }}</p></section>
+    {% endif %}
+    <form method="post" class="stack">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <div class="form-actions">
+            <button type="submit" name="action" value="comment" class="button secondary">Save comment</button>
+            {% if advisory.status != "reviewed" %}<button type="submit" name="action" value="review" class="button">Mark reviewed</button>{% endif %}
+        </div>
+    </form>
+</div>
+{% endblock %}

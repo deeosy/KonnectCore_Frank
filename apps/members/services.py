@@ -9,7 +9,7 @@ from openpyxl import load_workbook
 from .models import Member, MemberHistory
 
 REQUIRED_HEADERS = {"first_name", "last_name", "membership_number"}
-ALLOWED_HEADERS = REQUIRED_HEADERS | {"phone", "id_reference", "location", "status"}
+ALLOWED_HEADERS = REQUIRED_HEADERS | {"phone", "id_number", "location", "status"}
 
 
 def member_snapshot(member):
@@ -18,7 +18,6 @@ def member_snapshot(member):
         "last_name": member.last_name,
         "phone": member.phone,
         "membership_number": member.membership_number,
-        "id_reference": member.id_reference,
         "location": member.location,
         "status": member.status,
     }

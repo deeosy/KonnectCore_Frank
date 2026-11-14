@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Request Input{% endblock %}
+{% block header_title %}Request Input{% endblock %}
+{% block content %}
+<section class="form-card">
+    <h1>Request Input</h1>
+    <form method="post" class="stack">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button class="button" type="submit">Submit Request</button>
+    </form>
+    <a href="{% url 'input_allocation_list' %}">Cancel</a>
+</section>
+{% endblock %}

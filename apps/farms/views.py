@@ -1,4 +1,6 @@
 from django.contrib import messages
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 
@@ -6,8 +8,8 @@ from apps.members.models import Member
 from apps.organisations.decorators import manager_or_admin_required, organisation_required
 from apps.organisations.scope import operational_staff_required
 
-from .forms import CropForm, FarmCropSeasonForm, FarmForm
-from .models import Crop, Farm, FarmCropSeason
+from .forms import CropForm, FarmCropSeasonForm, FarmForm, FarmOwnershipTransferForm
+from .models import Crop, Farm, FarmCropSeason, FarmOwnershipTransfer
 
 
 @operational_staff_required
@@ -26,7 +28,17 @@ def farm_list(request):
 
 @operational_staff_required
 def farm_detail(request, farm_id):
-    farm = get_object_or_404(Farm.objects.for_organisation(request.organisation).select_related("member").prefetch_related("crop_seasons__crop"), pk=farm_id)
+    farm = get_object_or_404(
+        Farm.objects.for_organisation(request.organisation)
+        .select_related("member")
+        .prefetch_related(
+            "crop_seasons__crop",
+            "ownership_transfers__previous_member",
+            "ownership_transfers__successor_member",
+            "ownership_transfers__transferred_by",
+        ),
+        pk=farm_id,
+    )
     return render(request, "farms/farm_detail.html", {"farm": farm})
 
 
@@ -58,6 +70,61 @@ def farm_edit(request, farm_id):
         messages.success(request, "Farm profile updated.")
         return redirect("farm_detail", farm_id=farm.pk)
     return render(request, "farms/model_form.html", {"form": form, "title": "Edit farm", "cancel_object": farm})
+
+@manager_or_admin_required
+def farm_transfer(request, farm_id):
+    farm = get_object_or_404(
+        Farm.objects.for_organisation(request.organisation).select_related("member"),
+        pk=farm_id,
+    )
+    current_member = farm.member
+    form = FarmOwnershipTransferForm(
+        request.POST or None,
+        organisation=request.organisation,
+        current_member=current_member,
+    )
+    if request.method == "POST" and form.is_valid():
+        try:
+            with transaction.atomic():
+                locked_farm = Farm.objects.select_for_update().select_related("member").get(
+                    pk=farm.pk,
+                    organisation=request.organisation,
+                )
+                if locked_farm.member_id != current_member.pk:
+                    raise ValidationError("This farm's owner changed. Reload and review the current owner.")
+
+                previous_member = locked_farm.member
+                successor = form.cleaned_data["successor_member"]
+                locked_farm.member = successor
+                locked_farm.full_clean()
+
+                transfer = FarmOwnershipTransfer(
+                    organisation=request.organisation,
+                    farm=locked_farm,
+                    previous_member=previous_member,
+                    successor_member=successor,
+                    transferred_by=request.user,
+                    reason=form.cleaned_data["reason"].strip(),
+                )
+                transfer.full_clean()
+                locked_farm.save(update_fields=["member", "updated_at"])
+                transfer.save()
+        except ValidationError as exc:
+            form.add_error(None, "; ".join(exc.messages))
+        except IntegrityError:
+            form.add_error(
+                None,
+                "The transfer could not be completed because the successor already has a farm with this name.",
+            )
+        else:
+            messages.success(request, f"Farm ownership transferred to {successor.full_name}.")
+            return redirect("farm_detail", farm_id=farm.pk)
+
+    return render(
+        request,
+        "farms/transfer_form.html",
+        {"farm": farm, "form": form},
+    )
 
 
 @operational_staff_required
