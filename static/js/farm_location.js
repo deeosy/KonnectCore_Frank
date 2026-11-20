@@ -8,7 +8,8 @@
   "use strict";
   var lat = document.getElementById("id_latitude") || document.getElementById("id_farm-latitude");
   var lng = document.getElementById("id_longitude") || document.getElementById("id_farm-longitude");
-  if (!lat || !lng || !("geolocation" in navigator)) { return; }
+  if (!lat || !lng) { return; }
+  var hasGeolocation = "geolocation" in navigator;
 
   var wrap = document.createElement("p");
   wrap.className = "location-finder";
@@ -22,6 +23,10 @@
   status.setAttribute("aria-live", "polite");
   wrap.appendChild(button);
   wrap.appendChild(status);
+  if (!hasGeolocation) {
+    button.disabled = true;
+    status.textContent = "Location is unavailable on this device. You can still use the map or type coordinates.";
+  }
 
   // Place the button just before the latitude field's paragraph (Django form.as_p).
   var row = lat.closest("p") || lat.parentNode;
@@ -116,6 +121,7 @@
   };
 
   button.addEventListener("click", function () {
+    if (!hasGeolocation) { return; }
     button.disabled = true;
     status.textContent = "Finding your location…";
     navigator.geolocation.getCurrentPosition(function (pos) {

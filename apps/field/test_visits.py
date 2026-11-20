@@ -13,6 +13,7 @@ from apps.members.models import Member, MemberHistory
 from apps.organisations.middleware import ActiveOrganisationMiddleware
 from apps.organisations.models import Organisation, OrganisationMembership
 
+from .forms import AdvisoryRecordForm, FieldVisitForm, MAX_IMAGE_BYTES
 from .models import FieldVisit
 
 User = get_user_model()
@@ -151,3 +152,25 @@ class FieldVisitVisibilityTests(TestCase):
         self.assertNotEqual(member.id_front.name, member.id_back.name)
         self.assertEqual(event.changes["tag"], "ID Verification")
         self.assertNotIn("PRIVATE-ID-456", str(event.changes))
+
+    def test_field_photos_are_limited_to_five_megabytes(self):
+        def oversized():
+            return SimpleUploadedFile(
+                "large.gif", b"x" * (MAX_IMAGE_BYTES + 1), content_type="image/gif"
+            )
+        visit_form = FieldVisitForm(
+            {"visit_date": date(2026, 10, 1), "notes": "Large photo"},
+            {"photo": oversized()},
+            organisation=self.org,
+            member=self.north_member,
+            recorded_by=self.north,
+        )
+        self.assertFalse(visit_form.is_valid())
+        self.assertIn("Photo must be 5 MB or smaller.", str(visit_form.errors["photo"]))
+
+        advisory_form = AdvisoryRecordForm(
+            {"observation": "Pest"},
+            {"photo": oversized()},
+        )
+        self.assertFalse(advisory_form.is_valid())
+        self.assertIn("Photo must be 5 MB or smaller.", str(advisory_form.errors["photo"]))

@@ -22,3 +22,16 @@ class InputAllocationStatusForm(forms.ModelForm):
     class Meta:
         model = InputAllocation
         fields = ["status"]
+
+    def clean_status(self):
+        target = self.cleaned_data["status"]
+        current = self.instance.status
+        if not self.instance.can_transition_to(target):
+            labels = dict(InputAllocation.Status.choices)
+            raise forms.ValidationError(
+                "Cannot change status from {current} to {target}.".format(
+                    current=labels.get(current, current),
+                    target=labels.get(target, target),
+                )
+            )
+        return target

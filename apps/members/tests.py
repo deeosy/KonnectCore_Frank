@@ -139,6 +139,32 @@ class MemberRoleTests(MemberFixture):
         event = member.history.get(action=MemberHistory.Action.UPDATED)
         self.assertEqual(event.changes["location"], {"from": "Kumasi", "to": "Accra"})
 
+    def test_next_of_kin_details_are_saved_and_shown(self):
+        self.login_as(self.alpha_manager, self.alpha)
+        response = self.client.post(
+            reverse("member_create"),
+            self.member_payload(
+                number="A-NOK-1",
+                nok_first_name="Kwame",
+                nok_last_name="Mensah",
+                nok_relationship="Brother",
+                nok_phone="+233200000099",
+                nok_address="Tamale North",
+            ),
+        )
+        member = Member.objects.get(organisation=self.alpha, membership_number="A-NOK-1")
+        self.assertRedirects(response, reverse("member_detail", args=[member.pk]))
+        member.refresh_from_db()
+        self.assertEqual(member.nok_first_name, "Kwame")
+        self.assertEqual(member.nok_last_name, "Mensah")
+        self.assertEqual(member.nok_relationship, "Brother")
+        self.assertEqual(member.nok_phone, "+233200000099")
+        self.assertEqual(member.nok_address, "Tamale North")
+
+        detail = self.client.get(reverse("member_detail", args=[member.pk]))
+        for value in ("Kwame Mensah", "Brother", "+233200000099", "Tamale North"):
+            self.assertContains(detail, value)
+
     def test_member_id_uploads_create_private_id_verification_audit_event(self):
         self.login_as(self.alpha_manager, self.alpha)
         response = self.client.post(

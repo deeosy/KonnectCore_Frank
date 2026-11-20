@@ -1,6 +1,8 @@
 """Phase 1 of Kennedy's feedback: Add Crop farm picker, mobile quick-action bar, location button, wording."""
 import re
+from pathlib import Path
 
+from django.contrib.staticfiles import finders
 from django.urls import reverse
 
 from .forms import FarmForm
@@ -100,6 +102,25 @@ class LocationAndWordingTests(FarmFixture):
         self.assertIn(f"'nonce-{match.group(1)}'", response.headers["Content-Security-Policy"])
         self.assertContains(response, 'id="id_latitude"')
         self.assertContains(response, 'id="id_longitude"')
+
+    def test_location_script_has_map_toggle_and_geolocation_wiring(self):
+        script_path = finders.find("js/farm_location.js")
+        self.assertIsNotNone(script_path)
+        script = Path(script_path).read_text(encoding="utf-8")
+        for token in (
+            "Toggle Map View",
+            "navigator.geolocation",
+            "tile.openstreetmap.org",
+            "id_latitude",
+            "id_longitude",
+        ):
+            self.assertIn(token, script)
+        # Missing geolocation may disable the GPS button, but must not stop the
+        # map toggle from being created.
+        self.assertIn("if (!lat || !lng) { return; }", script)
+        self.assertNotIn('if (!lat || !lng || !("geolocation" in navigator)) { return; }', script)
+        self.assertIn("if (!hasGeolocation) {", script)
+        self.assertLess(script.index("if (!hasGeolocation) {"), script.index("Toggle Map View"))
 
     def test_register_wording_is_replaced_by_add(self):
         self.login_as(self.admin)

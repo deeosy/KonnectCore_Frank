@@ -113,6 +113,42 @@ class HarvestCoordinationTests(TestCase):
         self.assertIn(("Cocoa", "Tamale", 1), by_key)
         self.assertNotIn("Coffee", {group["crop"].name for group in groups})
 
+    def test_harvest_groups_use_gps_distance_when_coordinates_exist(self):
+        third_member = self.create_member(self.alpha, self.admin, "A3", "Efua", "Third")
+        near_a = Farm.objects.create(
+            organisation=self.alpha, member=self.visible_member, name="GPS near A",
+            location="Block A", latitude="9.000000", longitude="0.000000",
+        )
+        near_b = Farm.objects.create(
+            organisation=self.alpha, member=self.other_member, name="GPS near B",
+            location="Different label", latitude="9.020000", longitude="0.000000",
+        )
+        far = Farm.objects.create(
+            organisation=self.alpha, member=third_member, name="GPS far",
+            location="Block A", latitude="10.000000", longitude="0.000000",
+        )
+        self.create_season(near_a, self.maize, "gps early", self.reference_date + timedelta(days=2))
+        self.create_season(near_b, self.maize, "gps late", self.reference_date + timedelta(days=3))
+        self.create_season(far, self.maize, "gps distant", self.reference_date + timedelta(days=2))
+
+        groups = FarmCropSeason.harvest_groups(
+            self.alpha, reference_date=self.reference_date, window_days=7, vicinity_km=10
+        )
+        gps_groups = [
+            group for group in groups
+            if any(season.farm.name.startswith("GPS ") for season in group["seasons"])
+        ]
+        self.assertEqual(len(gps_groups), 2)
+        by_farm = {
+            season.farm.name: group
+            for group in gps_groups
+            for season in group["seasons"]
+        }
+        self.assertEqual(by_farm["GPS near A"], by_farm["GPS near B"])
+        self.assertEqual(by_farm["GPS near A"]["member_count"], 2)
+        self.assertIsNot(by_farm["GPS near A"], by_farm["GPS far"])
+        self.assertEqual(by_farm["GPS far"]["member_count"], 1)
+
     def test_harvest_window_filters_by_crop_date_and_member_scope(self):
         window = FarmCropSeason.harvest_window(
             self.alpha, reference_date=self.reference_date, window_days=7

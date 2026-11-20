@@ -220,15 +220,52 @@ class InputAllocationAccessTests(InputFixture):
     def test_manager_can_update_status_and_records_verifier(self):
         self.login(self.manager)
         response = self.client.post(
-            reverse("input_allocation_detail", args=[self.admin_allocation.pk]),
+            reverse("input_allocation_detail", args=[self.manager_allocation.pk]),
             {"status": InputAllocation.Status.PARTIALLY_DELIVERED},
         )
         self.assertRedirects(
-            response, reverse("input_allocation_detail", args=[self.admin_allocation.pk])
+            response, reverse("input_allocation_detail", args=[self.manager_allocation.pk])
         )
+        self.manager_allocation.refresh_from_db()
+        self.assertEqual(self.manager_allocation.status, InputAllocation.Status.PARTIALLY_DELIVERED)
+        self.assertEqual(self.manager_allocation.verified_by, self.manager)
+
+    def test_manager_cannot_skip_requested_to_delivered(self):
+        requested = self.create_allocation(
+            self.alpha, self.assigned_member, InputAllocation.Status.REQUESTED, "10.00"
+        )
+        self.login(self.manager)
+        response = self.client.post(
+            reverse("input_allocation_detail", args=[requested.pk]),
+            {"status": InputAllocation.Status.DELIVERED},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Cannot change status from Requested to Delivered.")
+        requested.refresh_from_db()
+        self.assertEqual(requested.status, InputAllocation.Status.REQUESTED)
+        self.assertIsNone(requested.verified_by)
+
+    def test_delivered_allocation_is_terminal(self):
+        self.login(self.manager)
+        response = self.client.post(
+            reverse("input_allocation_detail", args=[self.admin_allocation.pk]),
+            {"status": InputAllocation.Status.PARTIALLY_DELIVERED},
+        )
+        self.assertEqual(response.status_code, 200)
         self.admin_allocation.refresh_from_db()
-        self.assertEqual(self.admin_allocation.status, InputAllocation.Status.PARTIALLY_DELIVERED)
-        self.assertEqual(self.admin_allocation.verified_by, self.manager)
+        self.assertEqual(self.admin_allocation.status, InputAllocation.Status.DELIVERED)
+
+    def test_manager_can_complete_partially_delivered_allocation(self):
+        self.login(self.manager)
+        response = self.client.post(
+            reverse("input_allocation_detail", args=[self.manager_allocation.pk]),
+            {"status": InputAllocation.Status.DELIVERED},
+        )
+        self.assertRedirects(
+            response, reverse("input_allocation_detail", args=[self.manager_allocation.pk])
+        )
+        self.manager_allocation.refresh_from_db()
+        self.assertEqual(self.manager_allocation.status, InputAllocation.Status.DELIVERED)
 
     def test_manager_sees_all_allocations_but_not_other_tenants(self):
         self.login(self.manager)

@@ -1,3 +1,4 @@
+import math
 import uuid
 from datetime import timedelta
 from decimal import Decimal
@@ -9,6 +10,31 @@ from django.utils import timezone
 
 from apps.members.models import Member
 from apps.organisations.models import OrganisationOwnedModel
+
+# Farms within this distance are treated as being in the same harvesting vicinity.
+HARVEST_VICINITY_KM = 10
+EARTH_RADIUS_KM = 6371.0088
+
+
+def _farm_coordinates(farm):
+    """Return a farm's GPS point as floats, or None when coordinates are absent."""
+    if farm.latitude is None or farm.longitude is None:
+        return None
+    return float(farm.latitude), float(farm.longitude)
+
+
+def _distance_km(first, second):
+    """Great-circle distance between two (latitude, longitude) points in km."""
+    lat1, lon1 = (math.radians(value) for value in first)
+    lat2, lon2 = (math.radians(value) for value in second)
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+    haversine = (
+        math.sin(dlat / 2) ** 2
+        + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
+    )
+    return 2 * EARTH_RADIUS_KM * math.asin(math.sqrt(haversine))
+
 
 # ==============================================================================
 # CROP MODEL
@@ -31,13 +57,13 @@ class Crop(OrganisationOwnedModel):
     class Meta:
         ordering = ["name", "variety"]
         # Ensures that a Crop/Variety combination is unique within an organisation.
-        constraints = [
+        constraints = [  # noqa: RUF012
             models.UniqueConstraint(
                 fields=["organisation", "name", "variety"],
                 name="unique_org_crop_variety"
             )
         ]
-        indexes = [models.Index(fields=["organisation", "name"])]
+        indexes = [models.Index(fields=["organisation", "name"])]  # noqa: RUF012
 
     def clean(self):
         """Pre-save validation to clean up user input."""
@@ -88,7 +114,7 @@ class Farm(OrganisationOwnedModel):
 
     class Meta:
         ordering = ["member__first_name", "member__last_name", "name"]
-        constraints = [
+        constraints = [  # noqa: RUF012
             # Each member can only have one farm with a particular name in that organisation.
             models.UniqueConstraint(fields=["organisation", "member", "name"], name="unique_org_member_farm_name"),
             # Prevents entering negative farm sizes.
@@ -303,14 +329,18 @@ class FarmCropSeason(OrganisationOwnedModel):
         )
 
     @classmethod
-    def harvest_groups(cls, organisation, *, crop=None, reference_date=None, window_days=7, member_ids=None):
+    def harvest_groups(
+        cls, organisation, *, crop=None, reference_date=None, window_days=7,
+        member_ids=None, vicinity_km=HARVEST_VICINITY_KM,
+    ):
         """Cluster nearby farmers with the same crop and overlapping harvest dates.
 
-        Farmers are grouped only when they grow the same crop, their farms share
-        the same recorded location, and consecutive expected harvest dates are no
-        more than ``window_days`` apart. Each returned dictionary contains the
-        ``crop``, ``location``, ``date_start``, ``date_end``, member count and
-        the matching ``seasons``, ready for the machinery coordination dashboard.
+        Farms with GPS coordinates are grouped when they fall within
+        ``vicinity_km`` of the group's first farm. Farms without coordinates keep
+        the original behaviour of matching the recorded location text. Each
+        returned dictionary contains the ``crop``, ``location``, ``date_start``,
+        ``date_end``, member count and matching ``seasons`` for the machinery
+        coordination dashboard.
         """
         groups = []
         for season in cls.harvest_window(
@@ -320,11 +350,19 @@ class FarmCropSeason(OrganisationOwnedModel):
             window_days=window_days,
             member_ids=member_ids,
         ):
+            point = _farm_coordinates(season.farm)
             location = (season.farm.location or "").strip()
             location_key = location.casefold()
+            if not location and point:
+                location = f"GPS {point[0]:.4f}, {point[1]:.4f}"
             target = None
             for group in groups:
-                if group["crop_id"] != season.crop_id or group["location_key"] != location_key:
+                if group["crop_id"] != season.crop_id:
+                    continue
+                if group["point"] and point:
+                    if _distance_km(group["point"], point) > vicinity_km:
+                        continue
+                elif group["location_key"] != location_key:
                     continue
                 if season.expected_harvest_date - group["date_end"] <= timedelta(days=window_days):
                     target = group
@@ -335,6 +373,7 @@ class FarmCropSeason(OrganisationOwnedModel):
                     "crop_id": season.crop_id,
                     "location": location or "Location not recorded",
                     "location_key": location_key,
+                    "point": point,
                     "date_start": season.expected_harvest_date,
                     "date_end": season.expected_harvest_date,
                     "seasons": [],

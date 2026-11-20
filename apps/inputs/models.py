@@ -19,6 +19,16 @@ class InputAllocation(OrganisationOwnedModel):
         SEEDLINGS = "seedlings", "Seedlings"
         OTHER = "other", "Other"
 
+    # Requested -> Verified -> Delivered / Partially Delivered / Rejected.
+    # Delivered and Rejected are terminal; a partial delivery can be completed.
+    ALLOWED_STATUS_TRANSITIONS = {
+        Status.REQUESTED: {Status.VERIFIED, Status.REJECTED},
+        Status.VERIFIED: {Status.DELIVERED, Status.PARTIALLY_DELIVERED, Status.REJECTED},
+        Status.PARTIALLY_DELIVERED: {Status.DELIVERED},
+        Status.DELIVERED: set(),
+        Status.REJECTED: set(),
+    }
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     member = models.ForeignKey(Member, on_delete=models.PROTECT, related_name="input_allocations")
     input_type = models.CharField(max_length=20, choices=InputType.choices)
@@ -41,6 +51,14 @@ class InputAllocation(OrganisationOwnedModel):
         indexes = [
             models.Index(fields=["organisation", "member", "status"]),
         ]
+
+    def can_transition_to(self, status):
+        """Return whether ``status`` is a valid next step in the workflow."""
+        if status == self.status:
+            return True
+        if self._state.adding:
+            return status == self.Status.REQUESTED
+        return status in self.ALLOWED_STATUS_TRANSITIONS.get(self.status, set())
 
     def clean(self):
         """Keep allocations inside one tenant and reject meaningless quantities."""
