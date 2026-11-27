@@ -101,7 +101,7 @@ class MemberFarmForm(forms.ModelForm):
 
     crop = forms.ModelChoiceField(
         queryset=Crop.objects.none(), required=False, widget=forms.Select,
-        label="Crop they are planting",
+        label="Select crop",
         help_text="Choose a crop added by your organisation. Added crops appear here automatically.",
     )
     season = forms.CharField(

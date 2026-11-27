@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block header_title %}Crop catalogue{% endblock %}
+{% block content %}
+<section class="form-card wide">
+  <p class="eyebrow"><a href="{% url 'farm_list' %}">Farms and crops</a> / <a href="{% url 'crop_list' %}">Crop catalogue</a></p>
+  <h1>{{ title }}</h1>
+  <p class="muted small">Crops added here become available when recording farms and crop seasons.</p>
+
+  <form method="post" class="stack form-grid" novalidate>
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+
+    <fieldset class="form-section">
+      <legend>Crop details</legend>
+      <p>
+        <label for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+        {{ form.name }}
+        {{ form.name.errors }}
+      </p>
+      <p>
+        <label for="{{ form.variety.id_for_label }}">{{ form.variety.label }}</label>
+        {{ form.variety }}
+        {% if form.variety.help_text %}<span class="helptext">{{ form.variety.help_text }}</span>{% endif %}
+        {{ form.variety.errors }}
+      </p>
+    </fieldset>
+
+    <fieldset class="form-section status-section">
+      <legend>Status</legend>
+      <label class="checkbox-row" for="{{ form.is_active.id_for_label }}">
+        {{ form.is_active }}
+        <span>
+          <strong>{{ form.is_active.label }}</strong>
+          <small class="muted">Show this crop in selection lists across the organisation.</small>
+        </span>
+      </label>
+      {{ form.is_active.errors }}
+    </fieldset>
+
+    <div class="form-actions">
+      <a href="{% url 'crop_list' %}">Cancel</a>
+      <button class="button" type="submit">Save crop</button>
+    </div>
+  </form>
+</section>
+{% endblock %}

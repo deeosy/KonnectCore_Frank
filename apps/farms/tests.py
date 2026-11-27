@@ -275,3 +275,28 @@ class FarmRoleAndWorkflowTests(FarmFixture):
         self.alpha.save(update_fields=["status"])
         self.login_as(self.admin)
         self.assertRedirects(self.client.get(reverse("farm_list")), reverse("choose_organisation"))
+
+class CropFormLayoutTests(FarmFixture):
+    """The crop form is grouped so Name/Variety and Status read as distinct sections."""
+
+    def test_add_crop_form_is_grouped_and_labelled(self):
+        self.login_as(self.admin)
+        response = self.client.get(reverse("crop_create"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Crop details")
+        self.assertContains(response, "Status")
+        self.assertContains(response, 'class="checkbox-row"')
+        self.assertContains(response, 'for="id_name"')
+        self.assertContains(response, 'for="id_variety"')
+        self.assertContains(response, 'for="id_is_active"')
+        self.assertContains(response, "Save crop")
+        self.assertContains(response, "<strong>Crop catalogue</strong>")
+        self.assertNotContains(response, "<h1>Farms &amp; Crops</h1>")
+
+    def test_edit_crop_form_uses_the_same_layout(self):
+        self.login_as(self.admin)
+        response = self.client.get(reverse("crop_edit", args=[self.maize.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Crop details")
+        self.assertContains(response, 'class="checkbox-row"')
+        self.assertContains(response, "Edit crop")

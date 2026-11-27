@@ -29,6 +29,7 @@ class AddMemberWithFarmTests(FarmFixture):
         self.assertContains(response, 'id="id_farm-location"')
         self.assertContains(response, 'id="id_farm-latitude"')
         self.assertContains(response, 'id="id_farm-crop"')
+        self.assertContains(response, "Select crop")
         self.assertContains(response, "<select")
         self.assertContains(response, "Maize")
         self.assertNotContains(response, "Coffee")

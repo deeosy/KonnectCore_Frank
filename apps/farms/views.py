@@ -175,7 +175,7 @@ def crop_create(request):
         form.save()
         messages.success(request, "Crop added to the catalogue.")
         return redirect("crop_list")
-    return render(request, "farms/model_form.html", {"form": form, "title": "Add crop", "cancel_url": "crop_list"})
+    return render(request, "farms/crop_form.html", {"form": form, "title": "Add crop"})
 
 
 @manager_or_admin_required
@@ -186,7 +186,7 @@ def crop_edit(request, crop_id):
         form.save()
         messages.success(request, "Crop updated.")
         return redirect("crop_list")
-    return render(request, "farms/model_form.html", {"form": form, "title": "Edit crop", "cancel_url": "crop_list"})
+    return render(request, "farms/crop_form.html", {"form": form, "title": "Edit crop"})
 
 
 @manager_or_admin_required
