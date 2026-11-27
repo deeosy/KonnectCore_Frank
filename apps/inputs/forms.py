@@ -22,6 +22,7 @@ class InputAllocationStatusForm(forms.ModelForm):
     class Meta:
         model = InputAllocation
         fields = ["status"]
+        labels = {"status": "New status"}
 
     def clean_status(self):
         target = self.cleaned_data["status"]

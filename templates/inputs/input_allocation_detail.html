@@ -2,25 +2,35 @@
 {% block title %}Input Allocation Detail{% endblock %}
 {% block header_title %}Input Allocation{% endblock %}
 {% block content %}
-<section class="form-card">
+<div class="page-head hero">
+  <div>
+    <p class="eyebrow"><a href="{% url 'input_allocation_list' %}">Input allocations</a> / Detail</p>
     <h1>Allocation Detail</h1>
-    <dl>
-        <dt>Member</dt><dd>{{ allocation.member.full_name }}</dd>
-        <dt>Input Type</dt><dd>{{ allocation.get_input_type_display }}</dd>
-        <dt>Quantity</dt><dd>{{ allocation.quantity }}</dd>
-        <dt>Status</dt><dd><span class="status status-{{ allocation.status }}">{{ allocation.get_status_display }}</span></dd>
-        <dt>Requested At</dt><dd>{{ allocation.created_at|date:"M j, Y H:i" }}</dd>
-        {% if allocation.verified_by %}
-        <dt>Verified By</dt><dd>{{ allocation.verified_by.get_full_name|default:allocation.verified_by.email }}</dd>
-        {% endif %}
-    </dl>
-    {% if status_form %}
-    <form method="post" class="stack">
-        {% csrf_token %}
-        {{ status_form.as_p }}
-        <button class="button" type="submit">Update Status</button>
-    </form>
-    {% endif %}
-    <a href="{% url 'input_allocation_list' %}">Back to list</a>
+  </div>
+  <a class="button secondary" href="{% url 'input_allocation_list' %}">Back to list</a>
+</div>
+
+<section class="card">
+  <h2>Allocation details</h2>
+  <dl class="detail-list">
+    <dt>Member</dt><dd>{{ allocation.member.full_name }}</dd>
+    <dt>Input type</dt><dd>{{ allocation.get_input_type_display }}</dd>
+    <dt>Quantity</dt><dd>{{ allocation.quantity }}</dd>
+    <dt>Current status</dt><dd><span class="status status-{{ allocation.status }}">{{ allocation.get_status_display }}</span></dd>
+    <dt>Requested at</dt><dd>{{ allocation.created_at|date:"M j, Y H:i" }}</dd>
+    {% if allocation.verified_by %}<dt>Verified by</dt><dd>{{ allocation.verified_by.get_full_name|default:allocation.verified_by.email }}</dd>{% endif %}
+  </dl>
 </section>
+
+{% if status_form %}
+<section class="card">
+  <h2>Update status</h2>
+  <p class="muted small">Move this allocation to the next stage. The person making the change is recorded automatically.</p>
+  <form method="post" class="stack">
+    {% csrf_token %}
+    {{ status_form.as_p }}
+    <div class="form-actions"><button class="button" type="submit">Update status</button></div>
+  </form>
+</section>
+{% endif %}
 {% endblock %}
