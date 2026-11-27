@@ -366,6 +366,40 @@ class MemberIdentificationFormTests(MemberFixture):
         self.assertNotContains(response, "Formatted as shown on the document")
 
 
+    def test_issuing_authority_is_derived_from_the_document_type(self):
+        self.login_as(self.alpha_manager, self.alpha)
+        cases = [
+            (Member.IDType.GHANA_CARD, "1234567890", "National Identification Authority (NIA)"),
+            (Member.IDType.VOTER_ID, "0444901295", "Electoral Commission (EC)"),
+            (Member.IDType.NHIS, "00123456", "National Health Insurance Authority (NHIA)"),
+            (Member.IDType.PASSPORT, "G1234567", "Ghana Immigration Service"),
+            (Member.IDType.DRIVERS_LICENCE, "DL1234567", "Driver and Vehicle Licensing Authority (DVLA)"),
+        ]
+        for index, (id_type, number, expected) in enumerate(cases):
+            self.client.post(
+                reverse("member_create"),
+                self.member_payload(
+                    number=f"A-ID-AUTH-{index}", id_type=id_type,
+                    id_number=number, id_front=self.png(), id_issuing_authority="",
+                ),
+            )
+            member = Member.objects.get(membership_number=f"A-ID-AUTH-{index}")
+            self.assertEqual(member.id_issuing_authority, expected)
+
+    def test_operator_can_override_the_derived_issuing_authority(self):
+        self.login_as(self.alpha_manager, self.alpha)
+        self.client.post(
+            reverse("member_create"),
+            self.member_payload(
+                number="A-ID-AUTH-OVERRIDE", id_type=Member.IDType.GHANA_CARD,
+                id_number="1234567891", id_front=self.png(),
+                id_issuing_authority="NIA (registration centre)",
+            ),
+        )
+        member = Member.objects.get(membership_number="A-ID-AUTH-OVERRIDE")
+        self.assertEqual(member.id_issuing_authority, "NIA (registration centre)")
+
+
 @override_settings(MEDIA_ROOT=TEST_MEDIA_ROOT)
 class IdentificationModelValidationTests(TestCase):
     def setUp(self):

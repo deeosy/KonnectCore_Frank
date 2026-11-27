@@ -8,6 +8,7 @@ const profiles = [
   {
     id_type: "ghana_card", label: "Ghana Card", prefix: "GHA", display: "ghana_card",
     sanitize: "digits", pattern: "[0-9]{10}", min_length: 10, max_length: 10,
+    issuing_authority: "National Identification Authority (NIA)",
     error: "Your Ghana Card number must contain exactly 10 digits.",
   },
   {
@@ -120,6 +121,10 @@ assert.equal(
   f.ghana_card.toDisplay(f.ghana_card.toData(f.passport.toData("ab 12"))),
   "GHA-12"
 );
+
+// The issuing authority travels with the public profile so the browser can
+// fill it as soon as a document type is chosen.
+assert.equal(f.ghana_card.issuingAuthority, "National Identification Authority (NIA)");
 
 // Frontend validation mirrors the backend without verifying identity.
 assert.equal(f.ghana_card.validate("1234567890"), "");

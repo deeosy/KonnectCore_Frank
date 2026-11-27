@@ -36,6 +36,7 @@ DEFAULT_PROFILES: dict[str, dict[str, Any]] = {
         "display": "ghana_card",
         "format_hint": "GHA-123456789-0",
         "error": "Your Ghana Card number must contain exactly 10 digits.",
+        "issuing_authority": "National Identification Authority (NIA)",
         "requires_front_image": True,
         "requires_back_image": False,
         "legacy": False,
@@ -54,6 +55,7 @@ DEFAULT_PROFILES: dict[str, dict[str, Any]] = {
         "display": "plain",
         "format_hint": "4449012952",
         "error": "Enter a valid 10-digit Voter ID number.",
+        "issuing_authority": "Electoral Commission (EC)",
         "requires_front_image": True,
         "requires_back_image": False,
         "legacy": False,
@@ -73,6 +75,7 @@ DEFAULT_PROFILES: dict[str, dict[str, Any]] = {
         "display": "plain",
         "format_hint": "OLDVOTER123",
         "error": "Enter a valid legacy Voter ID number.",
+        "issuing_authority": "Electoral Commission (EC)",
         "requires_front_image": True,
         "requires_back_image": False,
         "legacy": True,
@@ -91,6 +94,7 @@ DEFAULT_PROFILES: dict[str, dict[str, Any]] = {
         "display": "plain",
         "format_hint": "12345678",
         "error": "Your NHIS membership number must contain exactly 8 digits.",
+        "issuing_authority": "National Health Insurance Authority (NHIA)",
         "requires_front_image": True,
         "requires_back_image": False,
         "legacy": False,
@@ -112,6 +116,7 @@ DEFAULT_PROFILES: dict[str, dict[str, Any]] = {
         "display": "plain",
         "format_hint": "G1234567",
         "error": "Enter a valid passport number.",
+        "issuing_authority": "Ghana Immigration Service",
         "requires_front_image": True,
         "requires_back_image": False,
         "legacy": False,
@@ -133,6 +138,7 @@ DEFAULT_PROFILES: dict[str, dict[str, Any]] = {
         "display": "plain",
         "format_hint": "DL1234567",
         "error": "Enter a valid driving licence number.",
+        "issuing_authority": "Driver and Vehicle Licensing Authority (DVLA)",
         "requires_front_image": True,
         "requires_back_image": False,
         "legacy": False,
@@ -151,6 +157,7 @@ DEFAULT_PROFILES: dict[str, dict[str, Any]] = {
         "display": "plain",
         "format_hint": "Document number",
         "error": "Enter a valid identification number.",
+        "issuing_authority": "",
         "requires_front_image": True,
         "requires_back_image": False,
         "legacy": False,
@@ -161,6 +168,7 @@ PUBLIC_PROFILE_KEYS = (
     "label", "placeholder", "help", "input_mode", "autocomplete", "sanitize",
     "pattern", "min_length", "max_length", "prefix", "display", "format_hint",
     "error", "requires_front_image", "requires_back_image", "legacy",
+    "issuing_authority",
 )
 
 
@@ -200,6 +208,11 @@ def profile_for(id_type: str) -> dict[str, Any]:
     if id_type == "voter_id_legacy" and not legacy_voter_enabled():
         raise ValidationError("Legacy Voter ID support is not enabled for this organisation.")
     return profile
+
+
+def default_issuing_authority(id_type: str) -> str:
+    """Issuer derived from the selected document. "Other" is supplied by the user."""
+    return str(profile_for(id_type).get("issuing_authority") or "")
 
 
 def available_id_types() -> list[tuple[str, str]]:

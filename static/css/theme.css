@@ -471,3 +471,19 @@ input[type="file"]::file-selector-button:hover{background:var(--kc-hover)}
   .form-card>.muted.small{margin:-4px 0 2px}
   .checkbox-row{align-items:center;padding:10px}
 }
+
+/* ---------- Member / group registration form ---------- */
+.form-card>.form-intro{margin:-6px 0 4px}
+.form-section>.form-section-wide{grid-column:1/-1}
+.form-actions-buttons{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px}
+.form-actions-buttons .button{margin:0}
+@media(max-width:900px){
+  .form-actions{flex-wrap:wrap}
+}
+@media(max-width:650px){
+  .form-card>.form-intro{margin:-4px 0 2px}
+  .form-grid>.form-section{grid-column:1/-1}
+  .form-actions,.form-actions-buttons{flex-direction:column;align-items:stretch}
+  .form-actions-buttons .button{width:100%}
+  .form-actions>a{text-align:center}
+}

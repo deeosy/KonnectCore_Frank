@@ -1,3 +1,5 @@
+import json
+
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
@@ -11,6 +13,7 @@ from apps.farms.forms import FarmForm,MemberFarmForm
 from apps.farms.models import Farm
 from apps.groups.models import GroupMemberAssignment
 from apps.members.forms import MemberForm
+from apps.members.identification import public_profile_config
 from apps.members.models import Member,MemberHistory
 from apps.members.services import member_snapshot,record_history
 from apps.members.views import create_member_with_farm,save_member_form
@@ -56,7 +59,7 @@ def register_member(request):
    x=create_member_with_farm(form,farm_form,organisation=request.organisation,actor=request.user)
    if x is not None:
     messages.success(request,f'{x.full_name} has been added and is awaiting assignment. The member will appear in your list once an Admin or Manager adds them to one of your groups.');return redirect('field_home')
- return render(request,'field/form.html',{'form':form,'farm_form':farm_form,'title':'Add member'})
+ return render(request,'field/form.html',{'form':form,'farm_form':farm_form,'title':'Add member','id_profile_config':json.dumps(public_profile_config())})
 @field_only
 def member_detail(request,member_id):
  """Read-only member page limited to the officer's assigned members (404 otherwise)."""

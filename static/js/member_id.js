@@ -92,6 +92,7 @@
       help: profile.help || "Enter the number printed on your document.",
       inputMode: profile.input_mode || "text",
       autocomplete: profile.autocomplete || "off",
+      issuingAuthority: profile.issuing_authority || "",
       requiresFrontImage: !!profile.requires_front_image,
       prefix: prefix,
       minLength: minLength,
@@ -153,6 +154,14 @@ if (typeof document !== "undefined") {
     var status = document.querySelector("[data-id-validation]");
     var otherFields = document.querySelector("[data-other-fields]");
     var form = input.form;
+    var numberField = input.closest ? input.closest(".id-number-field") : null;
+    var authority = form ? form.querySelector('[name="id_issuing_authority"]') : null;
+    function fieldFor(name) {
+      var element = form ? form.querySelector('[name="' + name + '"]') : null;
+      return element && element.closest ? element.closest("p") : null;
+    }
+    var frontField = fieldFor("id_front");
+    var backField = fieldFor("id_back");
     var formatters = {};
     try {
       formatters = api.formattersFromConfig(JSON.parse(configNode.getAttribute("data-profiles") || "[]"));
@@ -225,8 +234,23 @@ if (typeof document !== "undefined") {
       // Card value is not blocked by a digits-only native pattern.
       input.removeAttribute("pattern");
       if (help) { help.textContent = formatter.help; }
+
+      var none = !type.value;
+      // "No identification" removes every ID-specific input from the form.
+      if (numberField) { numberField.classList.toggle("is-hidden", none); }
+      if (frontField) { frontField.classList.toggle("is-hidden", none); }
+      if (backField) { backField.classList.toggle("is-hidden", none); }
+      if (status) { status.classList.toggle("is-hidden", none); }
       if (otherFields) {
-        otherFields.classList.toggle("is-hidden", type.value !== "other");
+        otherFields.classList.toggle("is-hidden", none || type.value !== "other");
+      }
+
+      if (authority && !none && type.value !== "other" && formatter.issuingAuthority) {
+        // Populate the known issuer on selection; operators can still edit it.
+        if (!authority.value || authority.dataset.autoIssuer !== type.value) {
+          authority.value = formatter.issuingAuthority;
+          authority.dataset.autoIssuer = type.value;
+        }
       }
     }
 

@@ -108,6 +108,17 @@ class AddMemberWithFarmTests(FarmFixture):
         self.assertIsNone(self.new_member())
         self.assertFalse(FarmCropSeason.objects.filter(crop=self.beta_crop, farm__organisation=self.alpha).exists())
 
+    def test_field_officer_form_is_organised_and_formats_ids(self):
+        self.login_as(self.field)
+        response = self.client.get(reverse("field_member_create"))
+        self.assertEqual(response.status_code, 200)
+        for legend in ("Member information", "Identification", "Next of kin", "Other details", "Farm details"):
+            self.assertContains(response, f"<legend>{legend}")
+        self.assertContains(response, "data-id-section")
+        self.assertContains(response, "id-profile-config")
+        self.assertContains(response, 'js/member_id.js" nonce=')
+        self.assertContains(response, "Select crop")
+
     def test_field_officer_can_add_member_with_farm(self):
         self.login_as(self.field)
         response = self.client.post(reverse("field_member_create"), self.payload(

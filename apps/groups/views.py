@@ -1,3 +1,5 @@
+import json
+
 from django.contrib import messages
 from django.db import transaction
 from django.db.models import Count, Q
@@ -10,6 +12,7 @@ from apps.organisations.scope import operational_staff_required
 from .forms import GroupMemberAssignmentForm, NewMemberAssignmentForm, StructureUnitForm
 from apps.farms.forms import MemberFarmForm
 from apps.members.forms import MemberForm
+from apps.members.identification import public_profile_config
 from apps.members.models import Member
 from apps.members.views import MEMBER_SORT_OPTIONS, create_member_with_farm, sort_members
 
@@ -134,6 +137,7 @@ def assignment_new_member(request, unit_id):
         "farm_form": farm_form,
         "join_form": join_form,
         "unit": unit,
+        "id_profile_config": json.dumps(public_profile_config()),
     })
 
 

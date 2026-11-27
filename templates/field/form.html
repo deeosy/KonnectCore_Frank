@@ -1,2 +1,81 @@
-{% extends "base.html" %}{% block title %}{{ title }}{% endblock %}{% block header_title %}Field Workspace{% endblock %}
-{% block content %}<div class="form-card field-form"><p class="eyebrow"><a href="{% url 'field_home' %}">Field workspace</a></p><h1>{{ title }}</h1><form method="post" enctype="multipart/form-data" class="stack" novalidate>{% csrf_token %}{% if farm_form %}<fieldset class="form-section"><legend>Member information</legend>{{ form.as_p }}</fieldset><fieldset class="form-section"><legend>Farm details <span class="muted small">(optional)</span></legend><p class="muted small">Leave blank to add the farm later.</p>{{ farm_form.non_field_errors }}{{ farm_form.as_p }}</fieldset>{% else %}{{ form.as_p }}{% if advisory_form %}<fieldset class="form-section"><legend>Advisory</legend>{{ advisory_form.as_p }}</fieldset>{% endif %}{% endif %}<div class="form-actions"><a href="{% url 'field_home' %}">Cancel</a><button class="button">Save</button></div></form></div>{% endblock %}
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ title }}{% endblock %}
+{% block header_title %}Field Workspace{% endblock %}
+{% block content %}
+<div class="form-card field-form">
+  <p class="eyebrow"><a href="{% url 'field_home' %}">Field workspace</a></p>
+  <h1>{{ title }}</h1>
+
+  {% if farm_form %}
+  <form method="post" enctype="multipart/form-data" class="form-grid" data-member-form>
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+
+    <fieldset class="form-section">
+      <legend>Member information</legend>
+      <p>{{ form.first_name.errors }}{{ form.first_name.label_tag }}{{ form.first_name }}</p>
+      <p>{{ form.last_name.errors }}{{ form.last_name.label_tag }}{{ form.last_name }}</p>
+      <p>{{ form.phone.errors }}{{ form.phone.label_tag }}{{ form.phone }}</p>
+      <p>{{ form.membership_number.errors }}{{ form.membership_number.label_tag }}{{ form.membership_number }}</p>
+    </fieldset>
+
+    <fieldset class="form-section id-section" data-id-section>
+      <legend>Identification</legend>
+      <p class="muted small">Select the document first. The number field and helper text will adjust automatically.</p>
+      <p>{{ form.id_type.errors }}{{ form.id_type.label_tag }}{{ form.id_type }}</p>
+      <p class="id-number-field">
+        {{ form.id_number.errors }}
+        {{ form.id_number.label_tag }}
+        {{ form.id_number }}
+        <span class="helptext" data-id-help>{{ form.id_number.help_text }}</span>
+      </p>
+      <div class="id-validation" data-id-validation role="status" aria-live="polite"></div>
+      <div data-other-fields{% if form.id_type.value != "other" %} class="is-hidden"{% endif %}>
+        <p>{{ form.id_document_name.errors }}{{ form.id_document_name.label_tag }}{{ form.id_document_name }}{{ form.id_document_name.help_text }}</p>
+        <p>{{ form.id_issuing_authority.errors }}{{ form.id_issuing_authority.label_tag }}{{ form.id_issuing_authority }}{{ form.id_issuing_authority.help_text }}</p>
+      </div>
+      <p>{{ form.id_front.errors }}{{ form.id_front.label_tag }}{{ form.id_front }}<span class="helptext">JPEG, PNG or WebP. Maximum 5 MB.</span></p>
+      <p>{{ form.id_back.errors }}{{ form.id_back.label_tag }}{{ form.id_back }}<span class="helptext">Optional unless the selected document needs a reverse image.</span></p>
+    </fieldset>
+
+    <fieldset class="form-section">
+      <legend>Next of kin</legend>
+      <p>{{ form.nok_first_name.errors }}{{ form.nok_first_name.label_tag }}{{ form.nok_first_name }}</p>
+      <p>{{ form.nok_last_name.errors }}{{ form.nok_last_name.label_tag }}{{ form.nok_last_name }}</p>
+      <p>{{ form.nok_relationship.errors }}{{ form.nok_relationship.label_tag }}{{ form.nok_relationship }}</p>
+      <p>{{ form.nok_phone.errors }}{{ form.nok_phone.label_tag }}{{ form.nok_phone }}</p>
+      <p class="form-section-wide">{{ form.nok_address.errors }}{{ form.nok_address.label_tag }}{{ form.nok_address }}</p>
+    </fieldset>
+
+    <fieldset class="form-section">
+      <legend>Other details</legend>
+      <p>{{ form.location.errors }}{{ form.location.label_tag }}{{ form.location }}</p>
+      <p>{{ form.photo.errors }}{{ form.photo.label_tag }}{{ form.photo }}</p>
+      <p>{{ form.status.errors }}{{ form.status.label_tag }}{{ form.status }}</p>
+    </fieldset>
+
+    <fieldset class="form-section">
+      <legend>Farm details <span class="muted small">(optional)</span></legend>
+      <p class="muted small">Leave blank to add the farm later.</p>
+      {{ farm_form.non_field_errors }}
+      {{ farm_form.as_p }}
+    </fieldset>
+
+    <div class="form-actions">
+      <a href="{% url 'field_home' %}">Cancel</a>
+      <button class="button" type="submit">Save member</button>
+    </div>
+  </form>
+  <div id="id-profile-config" data-profiles="{{ id_profile_config }}" hidden></div>
+  <script src="{% static 'js/member_id.js' %}" nonce="{{ request.csp_nonce }}" defer></script>
+  {% else %}
+  <form method="post" enctype="multipart/form-data" class="stack" novalidate>
+    {% csrf_token %}
+    {{ form.as_p }}
+    {% if advisory_form %}<fieldset class="form-section"><legend>Advisory</legend>{{ advisory_form.as_p }}</fieldset>{% endif %}
+    <div class="form-actions"><a href="{% url 'field_home' %}">Cancel</a><button class="button">Save</button></div>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}

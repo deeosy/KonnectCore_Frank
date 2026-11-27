@@ -3,7 +3,7 @@ from pathlib import Path
 from django import forms
 from django.core.files.uploadedfile import UploadedFile
 
-from .identification import available_id_types, normalize, profiles
+from .identification import available_id_types, default_issuing_authority, normalize, profiles
 from .models import Member, MemberDocument
 from .uploads import validate_document_file, validate_id_image
 
@@ -61,7 +61,7 @@ class MemberForm(forms.ModelForm):
         self.fields["id_type"].choices = [("", "No identification")] + available_id_types()
         self.fields["id_type"].help_text = "Choose the document first; the number field adapts automatically."
         self.fields["id_issuing_authority"].help_text = (
-            "Required for Other; otherwise an example is NIA, EC, NHIA or DVLA."
+            "Filled automatically for standard documents; edit if needed. Required for Other."
         )
         self._id_result = None
         self._id_unchanged_legacy = False
@@ -80,6 +80,17 @@ class MemberForm(forms.ModelForm):
         cleaned = super().clean()
         id_type = cleaned.get("id_type") or ""
         submitted = (cleaned.get("id_number") or "").strip()
+        submitted_authority = (cleaned.get("id_issuing_authority") or "").strip()
+        if not id_type:
+            cleaned["id_document_name"] = ""
+            cleaned["id_issuing_authority"] = ""
+        elif id_type != Member.IDType.OTHER:
+            # Issuer is derived from the document type, but an authorised
+            # operator may override it when an exception is needed.
+            cleaned["id_document_name"] = ""
+            cleaned["id_issuing_authority"] = (
+                submitted_authority or default_issuing_authority(id_type)
+            )
         existing_display = self.instance.id_number_display or self.instance.id_number or ""
         self._uploaded_front = isinstance(cleaned.get("id_front"), UploadedFile)
         self._uploaded_back = isinstance(cleaned.get("id_back"), UploadedFile)
@@ -152,9 +163,6 @@ class MemberForm(forms.ModelForm):
             if changed and profile.get("requires_back_image") and not (cleaned.get("id_back") or getattr(self.instance, "id_back", None)):
                 self.add_error("id_back", "Upload a clear photo of the back of this document.")
 
-        if id_type != Member.IDType.OTHER:
-            cleaned["id_document_name"] = ""
-            cleaned["id_issuing_authority"] = ""
         cleaned["id_number_raw"] = self.instance.id_number_raw
         cleaned["id_number_normalized"] = self.instance.id_number_normalized
         cleaned["id_number_display"] = self.instance.id_number_display

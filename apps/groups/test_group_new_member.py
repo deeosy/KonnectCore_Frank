@@ -37,6 +37,22 @@ class NewMemberInGroupTests(FarmFixture):
             for text in ("Member information", "Farm details", 'id="id_group-joined_at"', "Save and add another"):
                 self.assertContains(response, text)
 
+    def test_form_uses_organised_sections_and_dynamic_id_script(self):
+        self.login_as(self.admin)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        for legend in (
+            "Member information", "Identification", "Next of kin",
+            "Other details", "Group", "Farm details",
+        ):
+            self.assertContains(response, f"<legend>{legend}")
+        self.assertContains(response, "data-id-section")
+        self.assertContains(response, "data-id-help")
+        self.assertContains(response, "id-profile-config")
+        self.assertContains(response, 'js/member_id.js" nonce=')
+        self.assertContains(response, "form-actions-buttons")
+        self.assertContains(response, "Select crop")
+
     def test_field_officer_is_refused_and_signed_out_user_redirected(self):
         self.login_as(self.field)
         self.assertEqual(self.client.get(self.url).status_code, 403)
