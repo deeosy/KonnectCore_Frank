@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}ID verification · {{ member.full_name }}{% endblock %}
+{% block header_title %}Members{% endblock %}
+{% block content %}
+<section class="form-card">
+  <p class="eyebrow"><a href="{% url 'member_detail' member.id %}">{{ member.full_name }}</a> / ID verification</p>
+  <h1>Review ID verification</h1>
+  <div class="mp-dl">
+    <div><dt>Document type</dt><dd>{{ member.get_id_type_display|default:"-" }}</dd></div>
+    <div><dt>ID number</dt><dd class="cell-mono">{{ member.masked_id_number }}</dd></div>
+    <div><dt>Current status</dt><dd><span class="status status-{{ member.id_verification_status }}">{{ member.get_id_verification_status_display }}</span></dd></div>
+  </div>
+  <p class="muted small">A correctly formatted number is not proof of identity. Mark this verified only after reviewing the document and any authorised official check.</p>
+  <form method="post" class="stack">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <p>{{ form.id_verification_status.errors }}{{ form.id_verification_status.label_tag }}{{ form.id_verification_status }}{{ form.id_verification_status.help_text }}</p>
+    <div class="form-actions">
+      <a href="{% url 'member_detail' member.id %}">Cancel</a>
+      <button class="button">Save decision</button>
+    </div>
+  </form>
+</section>
+{% endblock %}

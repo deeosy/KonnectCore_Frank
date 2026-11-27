@@ -4,12 +4,15 @@ from pathlib import Path
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import Q
 from django.db.models.functions import Lower
+from django.utils import timezone
 
 # Inherit from OrganisationOwnedModel to automatically link data to an organisation.
 from apps.organisations.models import OrganisationOwnedModel
 
 from .history_display import format_changes
+from .identification import mask_number, normalize
 
 
 # ==============================================================================
@@ -57,10 +60,19 @@ class Member(OrganisationOwnedModel):
         ARCHIVED = "archived", "Archived"
 
     class IDType(models.TextChoices):
-        VOTER_ID = "voter_id", "Voter ID"
-        NHIS = "nhis", "NHIS"
         GHANA_CARD = "ghana_card", "Ghana Card"
+        VOTER_ID = "voter_id", "Voter ID"
+        VOTER_ID_LEGACY = "voter_id_legacy", "Voter ID (legacy)"
+        NHIS = "nhis", "NHIS"
+        PASSPORT = "passport", "Passport"
+        DRIVERS_LICENCE = "drivers_licence", "Driver's Licence"
         OTHER = "other", "Other"
+
+    class IDVerificationStatus(models.TextChoices):
+        UNVERIFIED = "unverified", "Unverified"
+        PENDING = "pending", "Pending review"
+        VERIFIED = "verified", "Verified"
+        REJECTED = "rejected", "Rejected"
 
     # Using UUIDs (Universally Unique Identifiers) instead of standard sequential integers
     # makes the IDs harder to guess, increasing security.
@@ -73,11 +85,23 @@ class Member(OrganisationOwnedModel):
     # Unique identifier for the cooperative/organisation.
     membership_number = models.CharField(max_length=80)
 
-    # ID card verification (Phase 1).
+    # ID card verification (Phase 1). ``id_number`` keeps the display value for
+    # backwards compatibility; the three fields below preserve the original,
+    # canonical and formatted values separately.
     id_type = models.CharField(max_length=20, choices=IDType.choices, blank=True)
     id_number = models.CharField(max_length=100, blank=True)
+    id_number_raw = models.CharField(max_length=100, blank=True)
+    id_number_normalized = models.CharField(max_length=100, blank=True)
+    id_number_display = models.CharField(max_length=160, blank=True)
+    id_document_name = models.CharField(max_length=120, blank=True)
+    id_issuing_authority = models.CharField(max_length=120, blank=True)
     id_front = models.ImageField(upload_to=member_id_front_path, blank=True)
     id_back = models.ImageField(upload_to=member_id_back_path, blank=True)
+    id_verification_status = models.CharField(
+        max_length=16, choices=IDVerificationStatus.choices,
+        default=IDVerificationStatus.UNVERIFIED,
+    )
+    id_verified_at = models.DateTimeField(null=True, blank=True)
 
     # Next of Kin / Succession management (Phase 1).
     nok_first_name = models.CharField("Next Of Kin (Nok) first name", max_length=100, blank=True)
@@ -107,16 +131,29 @@ class Member(OrganisationOwnedModel):
                 name="unique_org_membership_number_ci",
                 violation_error_message="This membership number already exists in this organisation.",
             ),
+            # Blank values are excluded so members without identification data
+            # do not collide with one another.
+            models.UniqueConstraint(
+                "organisation", "id_type", "id_number_normalized", "id_issuing_authority",
+                name="unique_org_identification_number",
+                condition=~Q(id_number_normalized=""),
+                violation_error_message="This identification number is already registered.",
+            ),
         ]
 
         # Database indexes for faster searching/filtering by status or name.
         indexes = [
             models.Index(fields=["organisation", "status"]),
             models.Index(fields=["organisation", "last_name", "first_name"]),
+            models.Index(fields=["organisation", "id_number_normalized"]),
         ]
 
     # Fields that should have whitespace automatically trimmed by our custom clean method.
-    TRIMMED_FIELDS = ("membership_number", "phone", "id_number", "nok_phone")
+    TRIMMED_FIELDS = (
+        "membership_number", "phone", "id_number", "id_number_raw",
+        "id_number_normalized", "id_number_display", "id_document_name",
+        "id_issuing_authority", "nok_phone",
+    )
 
     def clean_fields(self, exclude=None):
         """
@@ -139,6 +176,46 @@ class Member(OrganisationOwnedModel):
             errors = exc.update_error_dict(errors)
         if errors:
             raise ValidationError(errors)
+
+    def clean(self):
+        """Revalidate identification data even when it comes from imports."""
+        super().clean()
+        errors = {}
+        if self.id_number_raw:
+            try:
+                result = normalize(self.id_type, self.id_number_raw)
+            except ValidationError as exc:
+                errors["id_number"] = exc.messages
+            else:
+                self.id_number_normalized = result.normalized
+                self.id_number_display = result.display
+                self.id_number = result.display
+        elif self.id_type == self.IDType.OTHER and not self.id_document_name and (
+            self.id_number_normalized or self.id_number or self.id_front or self.id_back
+        ):
+            errors["id_document_name"] = ["Enter the name of this identification document."]
+
+        if self.id_number_normalized and self.organisation_id:
+            duplicate = Member.objects.for_organisation(self.organisation_id).filter(
+                id_number_normalized__iexact=self.id_number_normalized,
+                id_type=self.id_type,
+                id_issuing_authority__iexact=self.id_issuing_authority,
+            ).exclude(pk=self.pk).exists()
+            if duplicate:
+                errors["id_number"] = ["This identification number is already registered."]
+
+        if self.id_verification_status == self.IDVerificationStatus.VERIFIED:
+            if self.id_verified_at is None:
+                self.id_verified_at = timezone.now()
+        else:
+            self.id_verified_at = None
+        if errors:
+            raise ValidationError(errors)
+
+    @property
+    def masked_id_number(self):
+        """Partial identifier for ordinary member listings."""
+        return mask_number(self.id_number_display or self.id_number_normalized or self.id_number)
 
     @property
     def full_name(self):
@@ -191,7 +268,10 @@ class MemberHistory(OrganisationOwnedModel):
         CREATED = "created", "Created"
         UPDATED = "updated", "Updated"
         DOCUMENT_ADDED = "document_added", "Document added"
+        DOCUMENT_DOWNLOADED = "document_downloaded", "Document downloaded"
         ID_VERIFICATION = "id_verification", "ID Verification"
+        ID_IMAGE_VIEWED = "id_image_viewed", "ID image viewed"
+        ID_VERIFICATION_REVIEWED = "id_verification_reviewed", "ID verification reviewed"
         IMPORTED = "imported", "Imported"
         ARCHIVED = "archived", "Archived"
         RESTORED = "restored", "Restored"

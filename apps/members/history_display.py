@@ -9,7 +9,10 @@ database; it only controls how the existing audit data is presented.
 
 # Internal keys, or keys already covered by the action label, are not shown.
 # Sensitive ID values are hidden even if an older record happens to contain them.
-HIDDEN_KEYS = {"tag", "document_id", "id_number", "id_front", "id_back"}
+HIDDEN_KEYS = {
+    "tag", "document_id", "id_number", "id_front", "id_back",
+    "id_number_raw", "id_number_normalized", "id_number_display",
+}
 
 LABELS = {
     "first_name": "First name",
@@ -22,8 +25,12 @@ LABELS = {
     "new_status": "New status",
     "reason": "Reason",
     "id_type": "ID type",
+    "id_document_name": "Document name",
+    "id_issuing_authority": "Issuing authority",
+    "id_verification_status": "Verification status",
     "document_type": "Document type",
     "title": "Title",
+    "side": "Image",
 }
 
 # Choice values are stored as codes, but staff should see their proper names.
@@ -34,9 +41,16 @@ CHOICE_LABELS = {
     "deceased": "Deceased",
     "archived": "Archived",
     "voter_id": "Voter ID",
+    "voter_id_legacy": "Voter ID (legacy)",
     "nhis": "NHIS",
     "ghana_card": "Ghana Card",
+    "passport": "Passport",
+    "drivers_licence": "Driver's Licence",
     "other": "Other",
+    "unverified": "Unverified",
+    "pending": "Pending review",
+    "verified": "Verified",
+    "rejected": "Rejected",
 }
 
 NOT_RECORDED = "Not recorded"
@@ -95,6 +109,9 @@ def _id_verification(changes):
     document_type = changes.get("document_type")
     if not _missing(document_type):
         lines.append({"label": LABELS["document_type"], "value": _display(document_type)})
+    status = changes.get("verification_status")
+    if not _missing(status):
+        lines.append({"label": "Verification status", "value": _display(status)})
     if "id_number_updated" in changes:
         lines.append({"label": "ID number", "value": "Updated" if changes["id_number_updated"] else "Not changed"})
     for side in ("front", "back"):

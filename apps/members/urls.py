@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path  # type: ignore
 
 from . import views
 
@@ -8,6 +8,7 @@ urlpatterns = [
     path("import/", views.member_import, name="member_import"),
     path("<uuid:member_id>/", views.member_detail, name="member_detail"),
     path("<uuid:member_id>/edit/", views.member_edit, name="member_edit"),
+    path("<uuid:member_id>/id-verification/", views.member_id_verification_update, name="member_id_verification_update"),
     path("<uuid:member_id>/archive/", views.member_archive, name="member_archive"),
     path("<uuid:member_id>/documents/add/", views.member_document_add, name="member_document_add"),
     path("<uuid:member_id>/photo/", views.member_photo, name="member_photo"),

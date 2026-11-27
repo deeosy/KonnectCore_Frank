@@ -99,13 +99,14 @@ class MemberFarmForm(forms.ModelForm):
 
     DETAIL_FIELDS = ("size", "location", "latitude", "longitude")
 
-    crops = forms.ModelMultipleChoiceField(
-        queryset=Crop.objects.none(), required=False, widget=forms.CheckboxSelectMultiple,
-        label="Crops grown on this farm",
+    crop = forms.ModelChoiceField(
+        queryset=Crop.objects.none(), required=False, widget=forms.Select,
+        label="Crop they are planting",
+        help_text="Choose a crop added by your organisation. Added crops appear here automatically.",
     )
     season = forms.CharField(
         max_length=120, required=False, label="Season",
-        help_text="For example 2026 major. Needed when crops are selected.",
+        help_text="For example 2026 major. Needed when a crop is selected.",
     )
 
     class Meta:
@@ -121,7 +122,9 @@ class MemberFarmForm(forms.ModelForm):
         self.instance.organisation = organisation
         self.fields["name"].required = False
         self.fields["size_unit"].required = False
-        self.fields["crops"].queryset = Crop.objects.for_organisation(organisation).filter(is_active=True)
+        # Only the crops this organisation has configured can be chosen. When
+        # none exist the dropdown renders empty (just the blank option).
+        self.fields["crop"].queryset = Crop.objects.for_organisation(organisation).filter(is_active=True)
 
     def clean_size_unit(self):
         return self.cleaned_data.get("size_unit") or Farm.SizeUnit.HECTARES
@@ -132,16 +135,16 @@ class MemberFarmForm(forms.ModelForm):
     def clean(self):
         cleaned = super().clean()
         cleaned["season"] = (cleaned.get("season") or "").strip()
-        if cleaned.get("crops") and not cleaned["season"]:
-            self.add_error("season", "Enter the season for the selected crops.")
+        if cleaned.get("crop") and not cleaned["season"]:
+            self.add_error("season", "Enter the season for the selected crop.")
         return cleaned
 
     def has_farm_details(self):
         data = self.cleaned_data
-        return bool(data.get("crops")) or any(data.get(name) not in (None, "") for name in self.DETAIL_FIELDS)
+        return bool(data.get("crop")) or any(data.get(name) not in (None, "") for name in self.DETAIL_FIELDS)
 
     def save_for(self, member):
-        """Save the farm and one crop season per selected crop. Call inside a transaction."""
+        """Save the farm and the selected crop season. Call inside a transaction."""
         if not self.has_farm_details():
             return None
         farm = super().save(commit=False)
@@ -149,8 +152,12 @@ class MemberFarmForm(forms.ModelForm):
         farm.member = member
         farm.full_clean()
         farm.save()
-        for crop in self.cleaned_data.get("crops") or []:
-            season = FarmCropSeason(organisation=self.organisation, farm=farm, crop=crop, season=self.cleaned_data["season"])
+        crop = self.cleaned_data.get("crop")
+        if crop:
+            season = FarmCropSeason(
+                organisation=self.organisation, farm=farm, crop=crop,
+                season=self.cleaned_data["season"],
+            )
             season.full_clean()
             season.save()
         return farm

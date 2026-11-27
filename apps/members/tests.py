@@ -12,6 +12,7 @@ from django.db import IntegrityError, transaction
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from openpyxl import Workbook
+from PIL import Image
 
 from apps.organisations.middleware import ActiveOrganisationMiddleware
 from apps.organisations.models import Organisation, OrganisationMembership
@@ -22,6 +23,11 @@ from .models import Member, MemberDocument, MemberHistory
 User = get_user_model()
 TEST_MEDIA_ROOT = tempfile.mkdtemp(prefix="konnectcore-test-media-")
 TINY_GIF = base64.b64decode("R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=")
+
+_png_buffer = io.BytesIO()
+Image.new("RGB", (1, 1), "white").save(_png_buffer, format="PNG")
+TINY_PNG = _png_buffer.getvalue()
+PDF_BYTES = b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n"
 
 
 @override_settings(MEDIA_ROOT=TEST_MEDIA_ROOT)
@@ -70,8 +76,10 @@ class MemberFixture(TestCase):
         data = {
             "first_name": "Abena", "last_name": "Owusu", "phone": "+233200000001",
             "membership_number": number, "id_type": Member.IDType.OTHER,
-            "id_number": "ID-88", "location": "Kumasi",
-            "status": Member.Status.ACTIVE,
+            "id_number": "ID-88", "id_document_name": "Community ID",
+            "id_issuing_authority": "Local Council",
+            "id_front": SimpleUploadedFile("front.png", TINY_PNG, content_type="image/png"),
+            "location": "Kumasi", "status": Member.Status.ACTIVE,
         }
         data.update(overrides)
         return data
@@ -173,9 +181,9 @@ class MemberRoleTests(MemberFixture):
             self.member_payload(
                 number="A-ID-1",
                 id_type=Member.IDType.GHANA_CARD,
-                id_number="SECRET-ID-123",
-                id_front=SimpleUploadedFile("front.gif", TINY_GIF, content_type="image/gif"),
-                id_back=SimpleUploadedFile("back.gif", TINY_GIF, content_type="image/gif"),
+                id_number="1234567890",
+                id_front=SimpleUploadedFile("front.png", TINY_PNG, content_type="image/png"),
+                id_back=SimpleUploadedFile("back.png", TINY_PNG, content_type="image/png"),
             ),
         )
         member = Member.objects.get(organisation=self.alpha, membership_number="A-ID-1")
@@ -184,7 +192,11 @@ class MemberRoleTests(MemberFixture):
         self.assertEqual(event.changes["document_type"], "Ghana Card")
         self.assertTrue(event.changes["front_image_uploaded"])
         self.assertTrue(event.changes["back_image_uploaded"])
-        self.assertNotIn("SECRET-ID-123", str(event.changes))
+        self.assertEqual(member.id_number_raw, "1234567890")
+        self.assertEqual(member.id_number_normalized, "1234567890")
+        self.assertEqual(member.id_number_display, "GHA-123456789-0")
+        self.assertEqual(member.id_verification_status, Member.IDVerificationStatus.UNVERIFIED)
+        self.assertNotIn("1234567890", str(event.changes))
         self.assertNotEqual(member.id_front.name, member.id_back.name)
         self.assertRedirects(response, reverse("member_detail", args=[member.pk]))
 
@@ -202,11 +214,12 @@ class MemberRoleTests(MemberFixture):
 class MemberSearchTests(MemberFixture):
     def test_searches_phone_membership_id_location_and_name(self):
         self.alpha_member.phone = "+233555123"
-        self.alpha_member.id_number = "NAT-443"
+        self.alpha_member.id_number = "04449012952"
+        self.alpha_member.id_number_normalized = "04449012952"
         self.alpha_member.location = "Tamale North"
         self.alpha_member.save()
         self.login_as(self.alpha_admin, self.alpha)
-        for query in ("Ama", "Mensah", "A-001", "555123", "NAT-443", "Tamale"):
+        for query in ("Ama", "Mensah", "A-001", "555123", "2952", "Tamale"):
             self.assertContains(self.client.get(reverse("member_list"), {"q": query}), "Ama Mensah")
 
     def test_status_filter_is_scoped(self):
@@ -226,7 +239,7 @@ class MemberFileTests(MemberFixture):
         self.login_as(self.beta_admin, self.beta)
         response = self.client.post(
             reverse("member_document_add", args=[self.beta_member.pk]),
-            {"title": "Identity", "file": SimpleUploadedFile("identity.pdf", b"private-beta-data", content_type="application/pdf")},
+            {"title": "Identity", "file": SimpleUploadedFile("identity.pdf", PDF_BYTES, content_type="application/pdf")},
         )
         self.assertRedirects(response, reverse("member_detail", args=[self.beta_member.pk]))
         document = MemberDocument.objects.get(member=self.beta_member)
@@ -238,7 +251,7 @@ class MemberFileTests(MemberFixture):
         self.login_as(self.beta_admin, self.beta)
         download = self.client.get(reverse("member_document_download", args=[document.pk]))
         self.assertEqual(download.status_code, 200)
-        self.assertEqual(b"".join(download.streaming_content), b"private-beta-data")
+        self.assertEqual(b"".join(download.streaming_content), PDF_BYTES)
 
     def test_disallowed_document_extension_is_rejected(self):
         self.login_as(self.alpha_admin, self.alpha)
@@ -257,7 +270,7 @@ class MemberFileTests(MemberFixture):
             {
                 "title": "Ghana Card copy",
                 "document_type": MemberDocument.DocumentType.GHANA_CARD,
-                "file": SimpleUploadedFile("ghana-card.pdf", b"private-id-document", content_type="application/pdf"),
+                "file": SimpleUploadedFile("ghana-card.pdf", PDF_BYTES, content_type="application/pdf"),
             },
         )
         self.assertRedirects(response, reverse("member_detail", args=[self.alpha_member.pk]))

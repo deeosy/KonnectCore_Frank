@@ -1,7 +1,7 @@
 """Phase 2 of Kennedy's feedback (items 1+4): farm and crops captured while adding a member."""
 from django.urls import reverse
 
-from apps.farms.models import Farm, FarmCropSeason
+from apps.farms.models import Crop, Farm, FarmCropSeason
 from apps.farms.tests import FarmFixture
 
 from .models import Member, MemberHistory
@@ -28,6 +28,8 @@ class AddMemberWithFarmTests(FarmFixture):
         self.assertContains(response, 'id="id_location"')
         self.assertContains(response, 'id="id_farm-location"')
         self.assertContains(response, 'id="id_farm-latitude"')
+        self.assertContains(response, 'id="id_farm-crop"')
+        self.assertContains(response, "<select")
         self.assertContains(response, "Maize")
         self.assertNotContains(response, "Coffee")
 
@@ -39,32 +41,43 @@ class AddMemberWithFarmTests(FarmFixture):
         self.assertRedirects(response, reverse("member_detail", args=[member.pk]))
         self.assertFalse(Farm.objects.filter(member=member).exists())
 
-    def test_member_farm_and_crops_saved_together(self):
+    def test_member_farm_and_selected_crop_saved_together(self):
         self.login_as(self.admin)
         self.client.post(reverse("member_create"), self.payload(
             name="River plot", size="1.50", size_unit=Farm.SizeUnit.ACRES, location="Savelugu",
-            latitude="9.624000", longitude="-0.825000", crops=[str(self.maize.pk), str(self.cocoa.pk)], season="2026 major",
+            latitude="9.624000", longitude="-0.825000", crop=str(self.maize.pk), season="2026 major",
         ))
         member = self.new_member()
         self.assertEqual(member.location, "Tamale town")
         farm = Farm.objects.get(member=member)
         self.assertEqual((farm.name, farm.location, farm.size_unit), ("River plot", "Savelugu", Farm.SizeUnit.ACRES))
         self.assertEqual(str(farm.latitude), "9.624000")
-        seasons = FarmCropSeason.objects.filter(farm=farm)
-        self.assertEqual(set(seasons.values_list("crop__name", flat=True)), {"Maize", "Cocoa"})
-        self.assertEqual(set(seasons.values_list("season", flat=True)), {"2026 major"})
+        season = FarmCropSeason.objects.get(farm=farm)
+        self.assertEqual(season.crop, self.maize)
+        self.assertEqual(season.season, "2026 major")
         self.assertEqual(MemberHistory.objects.filter(member=member, action=MemberHistory.Action.CREATED).count(), 1)
+
+    def test_dropdown_is_empty_when_organisation_has_no_crops(self):
+        # Simulate an organisation that has not configured any active crops.
+        Crop.objects.filter(organisation=self.alpha).update(is_active=False)
+        self.login_as(self.admin)
+        response = self.client.get(reverse("member_create"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="id_farm-crop"')
+        self.assertNotContains(response, "Maize")
+        self.assertNotContains(response, "Cocoa")
+        self.assertNotContains(response, "Coffee")
 
     def test_blank_farm_name_defaults_to_main_farm(self):
         self.login_as(self.admin)
         self.client.post(reverse("member_create"), self.payload(location="Savelugu"))
         self.assertEqual(Farm.objects.get(member=self.new_member()).name, "Main farm")
 
-    def test_crops_without_season_save_nothing(self):
+    def test_crop_without_season_save_nothing(self):
         self.login_as(self.admin)
-        response = self.client.post(reverse("member_create"), self.payload(crops=[str(self.maize.pk)]))
+        response = self.client.post(reverse("member_create"), self.payload(crop=str(self.maize.pk)))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Enter the season for the selected crops.")
+        self.assertContains(response, "Enter the season for the selected crop.")
         self.assertIsNone(self.new_member())
 
     def test_half_entered_coordinates_save_nothing(self):
@@ -76,9 +89,9 @@ class AddMemberWithFarmTests(FarmFixture):
 
     def test_member_and_farm_errors_show_together(self):
         self.login_as(self.admin)
-        response = self.client.post(reverse("member_create"), self.payload(number="A-F01", crops=[str(self.maize.pk)]))
+        response = self.client.post(reverse("member_create"), self.payload(number="A-F01", crop=str(self.maize.pk)))
         self.assertContains(response, "already exists")
-        self.assertContains(response, "Enter the season for the selected crops.")
+        self.assertContains(response, "Enter the season for the selected crop.")
 
     def test_duplicate_membership_number_creates_no_farm(self):
         self.login_as(self.admin)
@@ -89,7 +102,7 @@ class AddMemberWithFarmTests(FarmFixture):
 
     def test_crop_from_another_organisation_is_rejected(self):
         self.login_as(self.admin)
-        response = self.client.post(reverse("member_create"), self.payload(crops=[str(self.beta_crop.pk)], season="2026"))
+        response = self.client.post(reverse("member_create"), self.payload(crop=str(self.beta_crop.pk), season="2026"))
         self.assertEqual(response.status_code, 200)
         self.assertIsNone(self.new_member())
         self.assertFalse(FarmCropSeason.objects.filter(crop=self.beta_crop, farm__organisation=self.alpha).exists())
@@ -97,7 +110,7 @@ class AddMemberWithFarmTests(FarmFixture):
     def test_field_officer_can_add_member_with_farm(self):
         self.login_as(self.field)
         response = self.client.post(reverse("field_member_create"), self.payload(
-            number="A-NEW2", location="Yendi", crops=[str(self.maize.pk)], season="2026 minor",
+            number="A-NEW2", location="Yendi", crop=str(self.maize.pk), season="2026 minor",
         ))
         self.assertRedirects(response, reverse("field_home"), fetch_redirect_response=False)
         member = self.new_member("A-NEW2")

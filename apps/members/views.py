@@ -1,3 +1,5 @@
+import json
+import mimetypes
 from decimal import Decimal
 from pathlib import Path
 
@@ -8,6 +10,7 @@ from django.db.models import Case, DecimalField, ExpressionWrapper, F, OuterRef,
 from django.db.models.functions import Coalesce
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 
 from apps.farms.forms import MemberFarmForm
 from apps.farms.models import Farm
@@ -15,7 +18,8 @@ from apps.finance.models import FinancialRecord
 from apps.organisations.decorators import manager_or_admin_required, organisation_required
 from apps.organisations.scope import operational_staff_required, visible_member_ids, visible_members
 
-from .forms import MemberDocumentForm, MemberForm, MemberImportForm
+from .forms import MemberDocumentForm, MemberForm, MemberIDVerificationForm, MemberImportForm
+from .identification import public_profile_config
 from .models import Member, MemberDocument, MemberHistory
 from .services import changed_fields, import_members, member_snapshot, record_history
 
@@ -100,9 +104,10 @@ def save_member_form(form, *, organisation, actor, creating):
 def _id_verification_state(member):
     return {
         "id_type": member.id_type,
-        "id_number": member.id_number,
+        "id_number": member.id_number_normalized,
         "id_front": member.id_front.name if member.id_front else "",
         "id_back": member.id_back.name if member.id_back else "",
+        "verification_status": member.id_verification_status,
     }
 
 
@@ -130,6 +135,7 @@ def record_id_verification(member, actor, before=None):
             "front_image_changed": after["id_front"] != previous.get("id_front", ""),
             "back_image_uploaded": bool(after["id_back"]),
             "back_image_changed": after["id_back"] != previous.get("id_back", ""),
+            "verification_status": after["verification_status"],
         },
     )
 
@@ -140,14 +146,18 @@ def member_list(request):
     query = request.GET.get("q", "").strip()
     status = request.GET.get("status", "").strip()
     if query:
-        members = members.filter(
+        # Full identification numbers must never appear in the URL/query string.
+        # Staff can find a record by the last four digits of the stored number.
+        search = (
             Q(first_name__icontains=query)
             | Q(last_name__icontains=query)
             | Q(phone__icontains=query)
             | Q(membership_number__icontains=query)
-            | Q(id_number__icontains=query)
             | Q(location__icontains=query)
         )
+        if query.isdigit():
+            search |= Q(id_number_normalized__endswith=query[-4:])
+        members = members.filter(search)
     if status in Member.Status.values:
         members = members.filter(status=status)
     else:
@@ -210,7 +220,10 @@ def member_create(request):
             if member is not None:
                 messages.success(request, "Member added.")
                 return redirect("member_detail", member_id=member.pk)
-    return render(request, "members/member_form.html", {"form": form, "farm_form": farm_form, "title": "Add member"})
+    return render(request, "members/member_form.html", {
+        "form": form, "farm_form": farm_form, "title": "Add member",
+        "id_profile_config": json.dumps(public_profile_config()),
+    })
 
 
 @manager_or_admin_required
@@ -228,7 +241,32 @@ def member_edit(request, member_id):
             record_id_verification(saved, request.user, before_id_verification)
             messages.success(request, "Member updated.")
             return redirect("member_detail", member_id=saved.pk)
-    return render(request, "members/member_form.html", {"form": form, "member": member, "title": "Edit member"})
+    return render(request, "members/member_form.html", {
+        "form": form, "member": member, "title": "Edit member",
+        "id_profile_config": json.dumps(public_profile_config()),
+    })
+
+
+@manager_or_admin_required
+def member_id_verification_update(request, member_id):
+    """Administrative review workflow; no government API is contacted."""
+    member = get_object_or_404(Member.objects.for_organisation(request.organisation), pk=member_id)
+    previous = member.id_verification_status
+    form = MemberIDVerificationForm(request.POST or None, instance=member)
+    if request.method == "POST" and form.is_valid():
+        reviewed = form.save(commit=False)
+        reviewed.id_verified_at = timezone.now() if reviewed.id_verification_status == Member.IDVerificationStatus.VERIFIED else None
+        reviewed.updated_by = request.user
+        reviewed.save(update_fields=["id_verification_status", "id_verified_at", "updated_by", "updated_at"])
+        record_history(
+            reviewed,
+            MemberHistory.Action.ID_VERIFICATION_REVIEWED,
+            request.user,
+            {"tag": "ID verification review", "previous_status": previous, "new_status": reviewed.id_verification_status},
+        )
+        messages.success(request, "ID verification status updated.")
+        return redirect("member_detail", member_id=reviewed.pk)
+    return render(request, "members/id_verification_form.html", {"form": form, "member": member})
 
 
 def _status_before_archive(member):
@@ -335,7 +373,11 @@ def member_id_photo(request, member_id, side):
     photo = getattr(member, f"id_{side}")
     if not photo:
         raise Http404("Member has no ID photo for this side.")
-    return FileResponse(photo.open("rb"), content_type="image/*")
+    record_history(member, MemberHistory.Action.ID_IMAGE_VIEWED, request.user, {
+        "tag": "ID image viewed", "side": side,
+    })
+    content_type = mimetypes.guess_type(photo.name)[0] or "application/octet-stream"
+    return FileResponse(photo.open("rb"), content_type=content_type)
 
 
 @organisation_required
@@ -347,6 +389,9 @@ def member_document_download(request, document_id):
         pk=document_id,
         member__organisation=request.organisation,
     )
+    record_history(document.member, MemberHistory.Action.DOCUMENT_DOWNLOADED, request.user, {
+        "tag": "Document download", "document_type": document.get_document_type_display(),
+    })
     return FileResponse(
         document.file.open("rb"),
         as_attachment=True,

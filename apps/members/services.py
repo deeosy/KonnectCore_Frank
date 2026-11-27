@@ -6,10 +6,14 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from openpyxl import load_workbook
 
+from .identification import normalize
 from .models import Member, MemberHistory
 
 REQUIRED_HEADERS = {"first_name", "last_name", "membership_number"}
-ALLOWED_HEADERS = REQUIRED_HEADERS | {"phone", "id_number", "location", "status"}
+ALLOWED_HEADERS = REQUIRED_HEADERS | {
+    "phone", "id_number", "id_type", "id_document_name", "id_issuing_authority",
+    "location", "status",
+}
 
 
 def member_snapshot(member):
@@ -96,7 +100,28 @@ def _validated_rows(uploaded):
             errors.append(f"Row {line_number}: first_name, last_name and membership_number are required.")
         elif data["status"] not in valid_statuses:
             errors.append(f"Row {line_number}: invalid status '{data['status']}'.")
+        elif data["id_number"] and not data["id_type"]:
+            errors.append(f"Row {line_number}: id_type is required when id_number is supplied.")
+        elif data["id_type"] and not data["id_number"]:
+            errors.append(f"Row {line_number}: id_number is required when id_type is supplied.")
         else:
+            if data["id_number"]:
+                try:
+                    if data["id_type"] == Member.IDType.OTHER and not data["id_document_name"]:
+                        raise ValidationError("Enter the name of this identification document.")
+                    result = normalize(data["id_type"], data["id_number"])
+                    data["id_number_raw"] = result.raw
+                    data["id_number_normalized"] = result.normalized
+                    data["id_number_display"] = result.display
+                    data["id_number"] = result.display
+                    if data["id_type"] != Member.IDType.OTHER:
+                        data["id_document_name"] = ""
+                        data["id_issuing_authority"] = ""
+                    # CSV/XLSX imports cannot carry document images, so these
+                    # records stay unverified until an operator reviews them.
+                except ValidationError as exc:
+                    errors.append(f"Row {line_number}: {exc.messages[0]}")
+                    continue
             cleaned.append((line_number, data))
     if errors:
         raise ValidationError(errors[:20])

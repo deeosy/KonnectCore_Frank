@@ -70,6 +70,17 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Ghana identification profiles. Defaults live in apps/members/identification.py;
+# deployments may tighten the permissive passport/DVLA patterns once an
+# authoritative current specification has been supplied by the issuer.
+IDENTIFICATION_LEGACY_VOTER_ENABLED = os.getenv("ID_LEGACY_VOTER_ENABLED", "false").lower() == "true"
+IDENTIFICATION_PROFILES = {}
+for _id_type, _env_name in (("passport", "ID_PASSPORT_PATTERN"), ("drivers_licence", "ID_DRIVERS_LICENCE_PATTERN")):
+    _pattern = os.getenv(_env_name, "").strip()
+    if _pattern:
+        IDENTIFICATION_PROFILES[_id_type] = {"pattern": _pattern}
+MAX_ID_IMAGE_BYTES = int(os.getenv("ID_MAX_IMAGE_BYTES", str(5 * 1024 * 1024)))
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = True

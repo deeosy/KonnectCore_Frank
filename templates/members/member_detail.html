@@ -31,7 +31,10 @@
           <div><dt>Membership number</dt><dd class="cell-mono">{{ member.membership_number }}</dd></div>
           <div><dt>Phone</dt><dd>{{ member.phone|default:"-" }}</dd></div>
           <div><dt>ID type</dt><dd>{{ member.get_id_type_display|default:"-" }}</dd></div>
-          <div><dt>ID number</dt><dd class="cell-mono">{{ member.id_number|default:"-" }}</dd></div>
+          <div><dt>ID number</dt><dd class="cell-mono">{% if active_membership.role == "admin" or active_membership.role == "manager" %}{{ member.id_number_display|default:member.id_number|default:"-" }}{% else %}{{ member.masked_id_number|default:"-" }}{% endif %}</dd></div>
+          {% if member.id_document_name %}<div><dt>Document name</dt><dd>{{ member.id_document_name }}</dd></div>{% endif %}
+          {% if member.id_issuing_authority %}<div><dt>Issuing authority</dt><dd>{{ member.id_issuing_authority }}</dd></div>{% endif %}
+          <div><dt>Verification</dt><dd><span class="status status-{{ member.id_verification_status }}">{{ member.get_id_verification_status_display }}</span>{% if active_membership.role == "admin" or active_membership.role == "manager" %} <a href="{% url 'member_id_verification_update' member.id %}">Review</a>{% endif %}</dd></div>
           {% if member.id_front %}<div><dt>ID front</dt><dd><a href="{% url 'member_id_photo' member.id 'front' %}">View front image</a></dd></div>{% endif %}
           {% if member.id_back %}<div><dt>ID back</dt><dd><a href="{% url 'member_id_photo' member.id 'back' %}">View back image</a></dd></div>{% endif %}
           <div><dt>Location</dt><dd>{{ member.location|default:"-" }}</dd></div>

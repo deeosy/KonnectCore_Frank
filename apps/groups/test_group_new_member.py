@@ -66,9 +66,9 @@ class NewMemberInGroupTests(FarmFixture):
         self.client.post(self.url, self.payload(joined=""))
         self.assertIsNone(GroupMemberAssignment.objects.get(unit=self.group, member=self.new_member()).joined_at)
 
-    def test_farm_and_crops_are_saved_with_the_member(self):
+    def test_farm_and_crop_are_saved_with_the_member(self):
         self.login_as(self.admin)
-        self.client.post(self.url, self.payload(location="Savelugu", crops=[str(self.maize.pk)], season="2026 major"))
+        self.client.post(self.url, self.payload(location="Savelugu", crop=str(self.maize.pk), season="2026 major"))
         member = self.new_member()
         farm = Farm.objects.get(member=member)
         self.assertEqual(farm.name, "Main farm")
@@ -93,9 +93,9 @@ class NewMemberInGroupTests(FarmFixture):
 
     def test_invalid_farm_part_saves_no_member_and_no_assignment(self):
         self.login_as(self.admin)
-        response = self.client.post(self.url, self.payload(crops=[str(self.maize.pk)]))
+        response = self.client.post(self.url, self.payload(crop=str(self.maize.pk)))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Enter the season for the selected crops.")
+        self.assertContains(response, "Enter the season for the selected crop.")
         self.assertIsNone(self.new_member())
         self.assertFalse(GroupMemberAssignment.objects.filter(unit=self.group).exists())
 

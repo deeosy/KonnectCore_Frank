@@ -1,4 +1,5 @@
 """Field visit visibility and photo protection (UAT I-4) and awaiting-assignment feedback (I-7)."""
+import io
 import shutil
 import tempfile
 from datetime import date
@@ -7,6 +8,7 @@ from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from PIL import Image
 
 from apps.groups.models import GroupMemberAssignment, StructureUnit
 from apps.members.models import Member, MemberHistory
@@ -19,6 +21,9 @@ from .models import FieldVisit
 User = get_user_model()
 TEST_MEDIA_ROOT = tempfile.mkdtemp(prefix="konnectcore-visit-tests-")
 TINY_GIF = b"GIF89a\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00\xff\xff\xff!\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;"
+_png_buffer = io.BytesIO()
+Image.new("RGB", (1, 1), "white").save(_png_buffer, format="PNG")
+TINY_PNG = _png_buffer.getvalue()
 
 
 @override_settings(MEDIA_ROOT=TEST_MEDIA_ROOT)
@@ -140,9 +145,9 @@ class FieldVisitVisibilityTests(TestCase):
         self.login(self.north)
         response = self.client.post(reverse("field_member_create"), {
             "first_name": "QA_TEST_ID", "last_name": "Officer", "membership_number": "QA_ID1",
-            "id_type": Member.IDType.GHANA_CARD, "id_number": "PRIVATE-ID-456", "status": "active",
-            "id_front": SimpleUploadedFile("front.gif", TINY_GIF, content_type="image/gif"),
-            "id_back": SimpleUploadedFile("back.gif", TINY_GIF, content_type="image/gif"),
+            "id_type": Member.IDType.GHANA_CARD, "id_number": "9876543210", "status": "active",
+            "id_front": SimpleUploadedFile("front.png", TINY_PNG, content_type="image/png"),
+            "id_back": SimpleUploadedFile("back.png", TINY_PNG, content_type="image/png"),
         })
         self.assertRedirects(response, reverse("field_home"))
         member = Member.objects.get(organisation=self.org, membership_number="QA_ID1")
@@ -151,7 +156,8 @@ class FieldVisitVisibilityTests(TestCase):
         self.assertTrue(member.id_back)
         self.assertNotEqual(member.id_front.name, member.id_back.name)
         self.assertEqual(event.changes["tag"], "ID Verification")
-        self.assertNotIn("PRIVATE-ID-456", str(event.changes))
+        self.assertNotIn("9876543210", str(event.changes))
+        self.assertEqual(member.id_number_display, "GHA-987654321-0")
 
     def test_field_photos_are_limited_to_five_megabytes(self):
         def oversized():
