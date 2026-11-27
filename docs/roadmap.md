@@ -32,7 +32,6 @@ This file lists planned work after the pilot-readiness fixes. Items in each sect
 
 ## Deferred from the pilot-readiness UAT
 
-- Show member history ("View changes") as readable text instead of raw data (I-8).
 - Add pagination to the member, collection, farm and payment lists (I-10).
 - Show an "access denied" page instead of redirecting a signed-in user to the login page (I-11).
 - Limit the import file picker to CSV and XLSX files (I-12).

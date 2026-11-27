@@ -35,6 +35,8 @@ Open the site:
 Start-Process "http://localhost:8000/login/"
 ```
 
+> To run the web server and database in the **same terminal with live logs**, use `docker compose up --build` instead of `-d`, then press `Ctrl+C` when you are done. See §1.
+
 ---
 
 ## 1. Local development with Docker (recommended)
@@ -78,11 +80,36 @@ Create the Super Admin (platform owner) account:
 docker compose exec web python manage.py createsuperuser
 ```
 
-### Daily use
+### Daily use: run web + db together in one terminal
+
+`compose.yaml` defines both `db` (PostgreSQL) and `web` (Django). One Compose command starts **both services together**; you do not need to start PostgreSQL separately. The `web` service waits for the database healthcheck and applies migrations before `runserver` starts.
+
+**Foreground mode — both services in the current terminal with live logs:**
 
 ```powershell
-docker compose up -d
+docker compose up --build
 ```
+
+When you are finished, press `Ctrl+C` in that terminal to stop both services. If you also want to remove the stopped containers and network, run:
+
+```powershell
+docker compose down
+```
+
+**Detached mode — both services in the background, terminal stays free:**
+
+```powershell
+docker compose up --build -d
+docker compose logs -f db web
+```
+
+When you are finished with the detached stack:
+
+```powershell
+docker compose down
+```
+
+Useful checks while the stack is running:
 
 ```powershell
 docker compose ps
@@ -92,11 +119,7 @@ docker compose ps
 docker compose logs -f web
 ```
 
-```powershell
-docker compose down
-```
-
-> `docker compose down` keeps the database volume. **Never** run `docker compose down -v` unless you intend to delete all local data.
+> `Ctrl+C` stops the services started in the foreground. `docker compose down` removes the containers and network but **keeps the database volume**. **Never** run `docker compose down -v` unless you intend to delete all local data.
 
 ### Rebuild after dependency or Dockerfile changes
 

@@ -16,6 +16,7 @@ from openpyxl import Workbook
 from apps.organisations.middleware import ActiveOrganisationMiddleware
 from apps.organisations.models import Organisation, OrganisationMembership
 
+from .history_display import format_changes
 from .models import Member, MemberDocument, MemberHistory
 
 User = get_user_model()
@@ -342,3 +343,84 @@ class SuspendedOrganisationTests(MemberFixture):
         self.alpha.save(update_fields=["status"])
         self.login_as(self.alpha_admin, self.alpha)
         self.assertRedirects(self.client.get(reverse("member_list")), reverse("choose_organisation"))
+
+
+class MemberHistoryDisplayTests(MemberFixture):
+    def test_created_and_id_verification_changes_are_readable(self):
+        self.assertEqual(
+            format_changes({
+                "member": {
+                    "first_name": "Prosper", "last_name": "Addo", "phone": "0539526814",
+                    "membership_number": "1", "location": "Argingalon", "status": "active",
+                }
+            }),
+            [
+                {"label": "Name", "value": "Prosper Addo"},
+                {"label": "Phone", "value": "0539526814"},
+                {"label": "Membership number", "value": "1"},
+                {"label": "Location", "value": "Argingalon"},
+                {"label": "Status", "value": "Active"},
+            ],
+        )
+        self.assertEqual(
+            format_changes({
+                "tag": "ID Verification", "document_type": "Ghana Card", "id_number_updated": True,
+                "back_image_changed": False, "back_image_uploaded": False,
+                "front_image_changed": False, "front_image_uploaded": False,
+            }),
+            [
+                {"label": "Document type", "value": "Ghana Card"},
+                {"label": "ID number", "value": "Updated"},
+                {"label": "Front ID image", "value": "not uploaded, not changed"},
+                {"label": "Back ID image", "value": "not uploaded, not changed"},
+            ],
+        )
+
+    def test_updated_and_archive_changes_are_readable(self):
+        self.assertEqual(
+            format_changes({"location": {"from": "Kumasi", "to": "Accra"}}),
+            [{"label": "Location", "value": "Changed from Kumasi to Accra"}],
+        )
+        self.assertEqual(
+            format_changes({"previous_status": "active", "new_status": "archived", "reason": "No longer farming"}),
+            [
+                {"label": "Previous status", "value": "Active"},
+                {"label": "New status", "value": "Archived"},
+                {"label": "Reason", "value": "No longer farming"},
+            ],
+        )
+
+    def test_private_id_values_are_never_shown(self):
+        self.assertEqual(
+            format_changes({"member": {"first_name": "Prosper", "id_number": "SECRET-ID", "id_front": "secret/path.gif"}}),
+            [{"label": "Name", "value": "Prosper"}],
+        )
+        self.assertEqual(
+            format_changes({"tag": "ID Verification", "id_number": "SECRET-ID", "document_type": "Ghana Card"}),
+            [{"label": "Document type", "value": "Ghana Card"}],
+        )
+
+    def test_member_profile_renders_readable_history_without_raw_data(self):
+        MemberHistory.objects.create(
+            organisation=self.alpha, member=self.alpha_member, actor=self.alpha_admin,
+            action=MemberHistory.Action.CREATED,
+            changes={"member": {
+                "first_name": "Prosper", "last_name": "Addo", "phone": "0539526814",
+                "membership_number": "1", "location": "Argingalon", "status": "active",
+            }},
+        )
+        MemberHistory.objects.create(
+            organisation=self.alpha, member=self.alpha_member, actor=self.alpha_admin,
+            action=MemberHistory.Action.ID_VERIFICATION,
+            changes={
+                "tag": "ID Verification", "document_type": "Ghana Card", "id_number_updated": True,
+                "back_image_changed": False, "back_image_uploaded": False,
+                "front_image_changed": False, "front_image_uploaded": False,
+            },
+        )
+        self.login_as(self.alpha_admin, self.alpha)
+        response = self.client.get(reverse("member_detail", args=[self.alpha_member.pk]))
+        for text in ('class="mp-history-entry"', "View changes", "Hide changes", "Prosper Addo", "Membership number", "Argingalon", "Ghana Card", "ID number", "Updated", "Front ID image", "not uploaded"):
+            self.assertContains(response, text)
+        for raw in ("id_number_updated", "front_image_uploaded", "membership_number&#x27;:", "membership_number':", "{&#x27;tag&#x27;", "{'tag'"):
+            self.assertNotContains(response, raw)

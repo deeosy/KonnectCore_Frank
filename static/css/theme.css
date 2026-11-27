@@ -1,3 +1,4 @@
+
 /* KonnectCore theme: Zendo-inspired dark teal UI with a light mode.
    Loaded after app.css. Dark is the default; light applies via html[data-theme="light"].
    Fonts are self-hosted (CSP font-src 'self'); see static/fonts/OFL-*.txt for licences. */
@@ -317,9 +318,22 @@ select option{background:var(--kc-card);color:var(--kc-fg)}
 .mp-timeline li.mp-timeline-empty::before{display:none}
 .mp-timeline strong{color:var(--kc-fg);font-size:14px}
 .mp-timeline small{color:var(--kc-fg-muted);font-size:12px}
-.mp-timeline details{margin-top:6px}
-.mp-timeline summary{color:var(--kc-accent);font-size:13px;font-weight:600;cursor:pointer}
-.mp-timeline pre{margin:8px 0 0;padding:10px;border-radius:10px;background:var(--kc-muted);color:var(--kc-fg-2);font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere}
+.mp-history-entry>summary{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;list-style:none;cursor:pointer}
+.mp-history-entry>summary::-webkit-details-marker{display:none}
+.mp-history-title{display:grid;gap:2px;min-width:0}
+.mp-history-toggle{display:inline-flex;align-items:center;gap:6px;color:var(--kc-accent);font-size:13px;font-weight:600;white-space:nowrap}
+.mp-history-toggle::after{content:"▾";font-size:11px;transition:transform .15s ease}
+.mp-history-entry[open] .mp-history-toggle::after{transform:rotate(180deg)}
+.mp-history-hide{display:none}
+.mp-history-entry[open] .mp-history-show{display:none}
+.mp-history-entry[open] .mp-history-hide{display:inline}
+.mp-changes{margin:10px 0 0;display:grid;padding:10px 12px;border-radius:10px;background:var(--kc-muted)}
+.mp-changes>div{display:grid;grid-template-columns:minmax(110px,140px) minmax(0,1fr);gap:12px;padding:6px 0;border-bottom:1px solid var(--kc-border)}
+.mp-changes>div:first-child{padding-top:0}
+.mp-changes>div:last-child{padding-bottom:0;border-bottom:0}
+.mp-changes dt{color:var(--kc-fg-muted);font-size:13px;font-weight:600;overflow-wrap:anywhere}
+.mp-changes dd{margin:0;color:var(--kc-fg);font-size:13px;overflow-wrap:anywhere}
+@media(max-width:520px){.mp-changes>div{grid-template-columns:minmax(0,1fr);gap:2px}}
 @media(max-width:1180px){.mp-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:900px){.mp-grid{grid-template-columns:minmax(0,1fr)}.mp-side{position:static}}
 @media(max-width:650px){.mp-identity{align-items:flex-start;gap:14px}.mp-avatar{width:56px;height:56px;border-radius:14px}.mp-avatar-initials{font-size:20px}.mp-stats{gap:12px}.mp-stat{padding:16px}.mp-stat .mp-tile{position:static;width:32px;height:32px;margin-bottom:10px}.mp-stat-label{padding-right:0}.mp-stat strong{font-size:22px}}

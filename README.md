@@ -45,6 +45,8 @@ Django templates provide the interface; shared presentation rules live in `stati
 
 For copy-ready commands covering local run, tests, and production, see [`RUNBOOK.md`](RUNBOOK.md).
 
+For a step-by-step guide to every page each role can use, see [`USER_GUIDE.md`](USER_GUIDE.md). It explains the Super Admin, Organisation Admin, Manager and Field Officer sidebars in order, with simple examples and the remaining work still to be built.
+
 ### Docker development (recommended)
 
 - Docker Desktop

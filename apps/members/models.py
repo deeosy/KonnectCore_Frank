@@ -9,6 +9,8 @@ from django.db.models.functions import Lower
 # Inherit from OrganisationOwnedModel to automatically link data to an organisation.
 from apps.organisations.models import OrganisationOwnedModel
 
+from .history_display import format_changes
+
 
 # ==============================================================================
 # FILE PATH HELPERS
@@ -211,3 +213,8 @@ class MemberHistory(OrganisationOwnedModel):
         """Ensure history record belongs to the same organisation as the member."""
         if self.member_id and self.organisation_id and self.member.organisation_id != self.organisation_id:
             raise ValidationError("History and member must belong to the same organisation.")
+
+    @property
+    def change_summary(self):
+        """Stored changes as labelled, plain-English lines for the member profile."""
+        return format_changes(self.changes)
